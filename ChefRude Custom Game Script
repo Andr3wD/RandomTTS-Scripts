@@ -1,0 +1,151 @@
+function onload()
+   decks = {green=getObjectFromGUID("135297"),red=getObjectFromGUID("a58489"),orange=getObjectFromGUID("86e3c2")}--define different decks
+   gamemodes = {{name="Co-op",green="all",red=6,orange="all"},{name="Competitive",green=6,red="all",orange="all"},{name="Mixed",green=15,red=15,orange="all"}}
+   currentgamemode = 1
+   crisiscard = getObjectFromGUID("805ef9")
+   crisiscardthing = 12
+   maindeckpos = decks.orange.getPosition()
+   self.createButton({
+      click_function = "changegamemode",
+      function_owner = self,
+      label          = gamemodes[1].name,
+      position       = {0,0.1,0.6},
+      width          = 1500,
+      height         = 500,
+      tooltip        = "Click me to cycle gamemodes",
+      font_size = 250,
+   })
+   self.createButton({
+      click_function = "startgame",
+      function_owner = self,
+      label          = "Start Game",
+      position       = {0,0.1,-0.6},
+      width          = 1500,
+      height         = 500,
+      tooltip        = "Click me to start the game",
+      font_size = 300,
+   })
+end
+
+function startgame(obj,col) --probably button function
+   if Player[col].admin == true then --only promoted/host can start game
+      function insidef()
+      local selfind = 0
+      local pos = maindeckpos
+      for i,v in pairs(decks) do
+         selfind = selfind + 1
+         v.shuffle()
+         v.setPosition({pos.x,pos.y+5+selfind*2,pos.z+5})
+         v.setRotation({0,0,180})
+      end
+      for i=1,6 do
+         decks.red.takeObject({
+            position       = {pos.x,pos.y+20,pos.z+5}, --to the side pos
+            smooth         = false,
+         })
+         decks.green.takeObject({
+            position       = {pos.x,pos.y+20,pos.z+5}, --to the side pos
+            smooth         = false,
+         })
+      end
+      for ind,var in pairs(decks) do
+         if gamemodes[currentgamemode][ind] == "all" then
+            decks[ind].setPosition({pos.x,pos.y,pos.z}) --maindeckpos
+         else
+            for i=1,gamemodes[currentgamemode][ind] do
+               decks[ind].takeObject({
+                  position       = {pos.x,pos.y,pos.z}, --maindeckpos
+                  smooth         = false,
+               })
+            end
+         end
+      end
+      local bag = spawnObject({
+         type           = "Bag",
+         position       = {pos.x,pos.y,pos.z+5},
+         scale          = {0.5,0.5,0.5},
+         sound          = false,
+      })
+      bag.setName("Extra Cards")
+      local cast = Physics.cast({ --easier to do cast than have scripting zone, since I don't know if table layout is static
+         origin       = {pos.x,pos.y,pos.z+5},
+         direction    = {0,1,0},
+         type         = 1,
+         max_distance = 20,
+         debug        = true,
+      }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+      for i,v in pairs(cast) do
+         local vobj = v.hit_object
+         if v.hit_object.tag == "Card" or v.hit_object.tag == "Deck" then
+            bag.putObject(v.hit_object)
+         end
+      end
+      waitFrames(10)
+      local cast = Physics.cast({ --get new maindeck
+         origin       = {pos.x,pos.y-1,pos.z},
+         direction    = {0,1,0},
+         type         = 1,
+         max_distance = 20,
+         debug        = true,
+      }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+      local maindeck
+      for i,v in pairs(cast) do
+         if v.hit_object.tag == "Deck" then --just to make sure
+            v.hit_object.shuffle()
+            maindeck = v.hit_object
+            break
+         end
+      end
+      crisiscard.setPosition({pos.x-5,pos.y,pos.z})
+      crisiscard.setRotation({0,0,180})
+      for i=1,crisiscardthing do
+         maindeck.takeObject({
+            position       = {pos.x-5,pos.y,pos.z},
+            smooth         = false,
+         })
+      end
+      waitFrames(60)
+      local cast = Physics.cast({ --get bottom endgame crisis area deck
+         origin       = {pos.x-5,pos.y-2,pos.z},
+         direction    = {0,1,0},
+         type         = 1,
+         max_distance = 20,
+         debug        = true,
+      }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+      local crisisdeck
+      for i,v in pairs(cast) do
+         if v.hit_object.tag == "Deck" then --just to make sure
+            v.hit_object.shuffle()
+            v.hit_object.setScale({2,1,2}) --was having problems with scale
+            crisisdeck = v.hit_object
+            break
+         end
+      end
+      maindeck.setPosition({pos.x,pos.y+5,pos.z})
+      crisisdeck.setPosition(pos)
+      return 1
+   end
+   startLuaCoroutine(self, "insidef")
+   end
+end
+
+function changegamemode(obj,col)
+   if Player[col].admin == true then --only promoted/host can start game
+      if currentgamemode + 1 > #gamemodes then
+         currentgamemode = 1
+      else
+         currentgamemode = currentgamemode + 1
+      end
+      self.editButton({
+         index          = 0,
+         label          = gamemodes[currentgamemode].name,
+      })
+   end
+end
+
+function waitFrames(frames)
+  while frames > 0 do
+  coroutine.yield(0)
+  frames = frames - 1
+  end
+end
