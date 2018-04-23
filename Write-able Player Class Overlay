@@ -1,3 +1,20 @@
+--[[This allows the Player class to write new variables, and then read them. This is an overlay, so everything that the Player class could do before is still there.
+EX:
+Lets say I am sitting in the white color spot.
+Print(Player.White.lift_height)
+> (Whatever the lift height of the player at the time is will be displayed)
+Player.White.lift_height = 1
+Print(Player.White.lift_height)
+> 1
+Player.White.changeColor("Grey")
+> <playername> is color White.
+
+Example End.
+The only thing that might want to be added is the automatic storing of player data based on each individual player's steam id 
+instead on color, then the player data would be loaded when the player chooses a color. Similarly, the player's data will be saved 
+when they leave the game or change to color Grey.
+]]
+
 function onload()
    oldplr = Player
    colors = {White="White",Green="Green",Blue="Blue",Orange="Orange",Yellow="Yellow",Pink="Pink",Purple="Purple",Red="Red",Teal="Teal",Brown="Brown"}
