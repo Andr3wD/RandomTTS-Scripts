@@ -1,0 +1,36 @@
+function onload()
+   oldplr = Player
+   colors = {White="White",Green="Green",Blue="Blue",Orange="Orange",Yellow="Yellow",Pink="Pink",Purple="Purple",Red="Red",Teal="Teal",Brown="Brown"}
+   Player = {}
+   for i,v in pairs(colors) do
+      class = {__index=function(tbl,key,val) --pci
+         if pcall(function(tbl,key,val,pcall1) --ci
+                     if oldplr[v][key] and pcall1 == false then
+                        return oldplr[v][key]
+                     end
+                  end,tbl,key,val,true) ~= false then
+            return oldplr[v][key]
+         end
+      end,__newindex=function(tbl,key,val) --pcni
+         if pcall(function(tbl,key,val,pcall1) --cni
+                     if oldplr[v][key] and pcall1 == false and type(oldplr[v][key]) ~= "function" then
+                        oldplr[v][key] = val
+                     end
+                  end,tbl,key,val,true) ~= false then
+            oldplr[v][key] = val
+            return
+         else
+            rawset(tbl,key,val)
+         end
+      end}
+      Player[v] = setmetatable({},class)
+   end
+end
+
+function onScriptingButtonDown(ind,col)
+   if ind == 1 then
+      Player[col].lift_height = 1
+      print("lift = " .. Player[col].lift_height)
+      Player[col].changeColor("Grey")
+   end
+end
