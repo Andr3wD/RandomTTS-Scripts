@@ -1,0 +1,21 @@
+invert = true --make false when playing from other direction
+
+function onCollisionEnter(info)
+  if info.collision_object.tag == "Card" and info.collision_object.name ~= "" then
+    local obj = info.collision_object
+    obj.setPosition(self.getPosition())
+    obj.setRotation(self.getRotation())
+    local tbl = obj.getTable("movement")
+    if invert == true then
+      local newtbl = {}
+      for i,v in pairs(tbl) do
+        table.insert(newtbl,{x=v.x*-1,y=v.y*-1})
+      end
+      Global.setTable("tbl11", newtbl)
+      Global.setVar("currentcardguid",obj.guid)
+    else
+      Global.setTable("tbl11", tbl)
+      Global.setVar("currentcardguid",obj.guid)
+    end
+  end
+end
