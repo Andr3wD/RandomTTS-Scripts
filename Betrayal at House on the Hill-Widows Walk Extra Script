@@ -1,0 +1,539 @@
+function onload(save_data)
+   if #getSeatedPlayers() == 1 then
+      self.interactable = true
+   else
+      self.interactable = false
+   end
+   itemcard = {"Sewing Room","Storeroom","Wine Cellar","Storm Cellar","Solarium","Larder","Laundry","Bloody Room","Arsenal","Arsenal"}
+   omencard = {"Nursery","Kitchen","Dungeon","Dining Room","Charred Room","Theater","Furnace Room","Master Bedroom","Rookery","Study","Gallery","Servants' Quarters","Abandoned Room","Junk Room","Gymnasium","Balcony","Catacombs","Pentagram Chamber"}
+   eventcard = {"Vault","Tree House","Locked Room","Attic","Gardens","Bedroom","Ballroom","Tower","Chapel","Patio","Statuary Corridor","Menagerie","Research Laboratory","Cave","Operating Laboratory","Crypt","Bathroom","Widow's Walk","Panic Room","Graveyard","Conservatory","Library","Underground Lake","Organ Room","Game Room"}
+   --landings,tokens,highlight,playercards,currentlyrolling,drawncards,newesttile,plrcoll = {},{},false,{},false,{},{},""
+   getObjectFromGUID("6fd7da").setTable("level",{"Upper","Roof"})
+   for i,v in pairs(getAllObjects()) do
+      if string.find(v.getName(),"Room Tile Stack") ~= nil then
+         roomstack = v
+         roomstackpos = v.getPosition()
+      elseif string.find(v.getName(),"Item Stack") ~= nil then
+         itemstack = v
+      elseif string.find(v.getName(),"Omen Stack") ~= nil then
+         omenstack = v
+      elseif string.find(v.getName(),"Event Stack") ~= nil then
+         eventstack = v
+      elseif v.getName() == "Basement Landing" then
+         v.setTable("level", {"Basement"})
+      elseif v.getName() == "Upper Landing" then
+         v.setTable("level", {"Upper"})
+      elseif v.getName() == "Enterance Hall/Foyer/Grand Staircase" then
+         v.setTable("level", {"Ground"})
+      elseif v.getName() == "Omens" then
+         omencounter = v
+      end
+   end
+   if save_data ~= "" then
+      landings,tokens,highlight,playercards,currentlyrolling,drawncards,newesttile,plrcoll,hauntstarted = JSON.decode(save_data)
+   elseif save_data == "" then
+      landings,tokens,highlight,playercards,currentlyrolling,drawncards,newesttile,plrcoll,hauntstarted = {},{},false,{},false,{},{},"",false
+   end
+end
+
+function onPlayerChangedColor(col)
+   if col == "Grey" then
+      playerids1 = ""
+      for i,v in pairs(getSeatedPlayers()) do
+         playerids1 = playerids1 .. " " .. v.steam_id
+      end
+      for i,v in pairs(playercards) do
+         if string.find(playerids1,tostring(v.plrdata)) == nil then
+            playercards[i] = nil
+         end
+      end
+   end
+end
+
+function onObjectLeaveContainer(container,obj)
+   if highlight == true and string.find(obj.getName(),"Token") ~= nil then
+      obj.highlightOn({0,0.4,0.4})
+   end
+end
+
+function onPlayerTurnEnd(player_color_end, player_color_next)
+if newesttile ~= nil and newesttile[#newesttile].tile ~= nil then
+   newesttile[#newesttile].tile.setLock(true)
+end
+for i,v in pairs(getAllObjects()) do --put all event cards away that are not locked
+   if v.getDescription() == "Event" and v.getLock() == false then
+      v.setRotation({0,180,0})
+      v.setPositionSmooth({6.13, 5, -33.90}, false, true)
+   end
+end
+end
+
+function onChat(msg,plr)
+   if string.sub(msg,1,1) .. string.lower(string.sub(msg,2,10)) == "!highlight" and plr.admin == true then
+      for i,v in pairs(getAllObjects()) do
+         if string.find(v.getName(),"Token") ~= nil and highlight == false then
+            v.highlightOn({0,0.4,0.4})
+         elseif string.find(v.getName(),"Token") ~= nil and highlight == true then
+            v.highlightOff()
+         end
+      end
+      if highlight == true then
+         highlight = false
+      elseif highlight == false then
+         highlight = true
+      end
+      return false
+   elseif string.sub(msg,1,1) .. string.lower(string.sub(msg,2,5)) == "!roll" and currentlyrolling == false then
+      if #getSeatedPlayers() ~= #playercards then --checks if everyone has registered first before going, will break script without.
+         printToAll("Someone has not registered yet",{255,255,255})
+         return false
+      end
+      if string.sub(msg,7) == "" then --makes sure someone is rolling something
+         printToColor("You must roll a number or stat", plr.color, {255,255,255})
+         return false
+      end
+      for i,v in pairs(playercards) do
+         if v.plrdata == plr.steam_id then --player who did command in chat compared with setup
+            if v.dice ~= nil then
+               for i,v in pairs(v.dice) do
+                  v.destruct()
+               end
+            end
+            v.dice,plrname,newdice = {},plr.steam_name,{}
+            local tab = v.card[1].getTable("stats")
+            if string.lower(string.sub(msg,7)) == "might" or string.lower(string.sub(msg,7)) == "knowledge" or string.lower(string.sub(msg,7)) == "speed" or string.lower(string.sub(msg,7)) == "sanity" then
+               local var = v.card[1].getVar(string.lower(string.sub(msg,7)) .. "Stat")
+               rollingfor = string.lower(string.sub(msg,7))
+               for i=1,var do
+                  local newobj11 = getObjectFromGUID("3805e7").clone({position={v.card[1].getPosition().x,i,v.card[1].getPosition().z}})
+                  newobj11.setName(plr.color .. " autoroll dice")
+                  newobj11.setColorTint(stringColorToRGB(plr.color))
+                  table.insert(newdice,newobj11)
+                  newobj11.interactable = false
+               end
+               v.dice,currentlyrolling = newdice,true
+               startLuaCoroutine(self,"rolldice")
+            elseif tonumber(string.sub(msg,7)) ~= nil then --checking for number instead of stat
+               if math.abs(tonumber(string.sub(msg,7))) > 10 then
+                  printToColor("You cannot roll that many dice", plr.color, {255,255,255})
+                  return false
+               end
+               local var = math.abs(tonumber(string.sub(msg,7)))
+               rollingfor = string.lower(string.sub(msg,7))
+               for i=1,var do
+                  local newobj11 = getObjectFromGUID("3805e7").clone({position={v.card[1].getPosition().x,i,v.card[1].getPosition().z}})
+                  newobj11.setName(plr.color .. " autoroll dice")
+                  newobj11.setColorTint(stringColorToRGB(plr.color))
+                  table.insert(newdice,newobj11)
+                  newobj11.interactable = false
+               end
+               v.dice,currentlyrolling = newdice,true
+               startLuaCoroutine(self,"rolldice")
+            end
+         end
+      end
+      return false
+   elseif string.sub(msg,1,1) .. string.lower(string.sub(msg,2,8)) == "!disable" and plr.admin == true then
+      for i,v in pairs(getAllObjects()) do
+         if v.tag == "Figurine" then
+            v.setVar("disable", true)
+         end
+      end
+   elseif string.sub(msg,1,1) .. string.lower(string.sub(msg,2,13)) == "!randomcolors" and plr.admin == true then
+      possiblecolors = {"Red","White","Blue","Orange","Green","Purple"}
+      for i,v in pairs(Player.getPlayers()) do
+         local currand = math.random(1,6)
+         v.changeColor(possiblecolors[currand])
+         table.remove(possiblecolors,currand)
+         printToAll(v.steam_name .. " is: " .. possiblecolors[currand] .. " with character state: " .. math.random(1,2), stringColorToRGB(possiblecolors[currand]))
+      end
+      return false
+   elseif string.sub(msg,1,1) .. string.lower(string.sub(msg,2,5)) == "!help" then
+      printToColor("!highlight\n!disable(onetimeuse,irreversable)\n!randomcolors(forstartofgame)\n!setup(beforegamestarts)\n!roll might/speed/knowledge/sanity/#(rolls your value)", plr.color, stringColorToRGB("Red"))
+      return false
+   elseif string.sub(msg,1,1) .. string.lower(string.sub(msg,2,6)) == "!setup" then
+      if plr.getSelectedObjects()[1] == nil then
+         printToColor("You must select your player card first", plr.color, stringColorToRGB("Red"))
+      elseif plr.getSelectedObjects()[1] ~= nil then
+         if playercards[1] == nil then
+            table.insert(playercards,{card=plr.getSelectedObjects(),plrdata=plr.steam_id}) --playercards table for all players
+            for i,v in pairs(getAllObjects()) do
+               if v.tag == "Figurine" and v.getName() == plr.getSelectedObjects()[1].getName() then
+                  printToAll(plr.steam_name .. " has registered as " .. plr.getSelectedObjects()[1].getName(), stringColorToRGB(plr.color))
+                  v.setLuaScript(figurinescript)
+                  v.reload()
+               end
+            end
+         elseif playercards[1] ~= nil then
+            playerids = ""
+            for i,v in pairs(playercards) do
+               playerids = playerids .. " " .. tostring(v.plrdata)
+            end
+            if string.find(playerids,plr.steam_id) ~= nil then
+               for i,v in pairs(playercards) do
+                  if v.plrdata == plr.steam_id then
+                     changedchar = {true,i}
+                  end
+               end
+            else
+               changedchar = {false}
+            end
+            if changedchar[1] == true then --player changing character
+               playercards[changedchar[2]].card = plr.getSelectedObjects()
+               printToAll(plr.steam_name .. " changed to " .. plr.getSelectedObjects()[1].getName(), stringColorToRGB(plr.color))
+               for i,v in pairs(getAllObjects()) do
+                  if v.tag == "Figurine" and v.getName() == plr.getSelectedObjects()[1].getName() then
+                     v.setLuaScript(figurinescript)
+                     v.reload()
+                  end
+               end
+            elseif changedchar[1] == false then
+               table.insert(playercards,{card=plr.getSelectedObjects(),plrdata=plr.steam_id})
+               for i,v in pairs(getAllObjects()) do
+                  if v.tag == "Figurine" and v.getName() == plr.getSelectedObjects()[1].getName() then
+                     printToAll(plr.steam_name .. " has registered as " .. plr.getSelectedObjects()[1].getName(), stringColorToRGB(plr.color))
+                     v.setLuaScript(figurinescript)
+                     v.reload()
+                  end
+               end
+            end
+         end
+      end
+      return false
+   elseif string.sub(msg,1,1) .. string.lower(string.sub(msg,2,5)) == "!undo" and plr.admin == true then
+      newesttile[#newesttile].tile.flip()
+      newesttile[#newesttile].tile.setPositionSmooth({2.00, 4, -24.01},false,true)
+      if newesttile[#newesttile].card ~= nil then
+         newesttile[#newesttile].card.setLock(false)
+         newesttile[#newesttile].card.flip()
+         newesttile[#newesttile].card.setPositionSmooth(newesttile[#newesttile].pos,false,true)
+         newesttile[#newesttile].mainpack.shuffle()
+      end
+      newesttile[#newesttile] = nil
+      return false
+   end
+end
+
+function onsave()
+   local save_data = JSON.encode({landings,tokens,highlight,playercards,currentlyrolling,drawncards,newesttile,plrcoll})
+   return save_data
+end
+
+function rolldice()
+   diceval,dicevaln = "",0
+   waitFrames(10)
+   for i,v in pairs(newdice) do
+      v.randomize()
+   end
+   waitFrames(5)
+   for i,v in pairs(newdice) do
+      v.randomize()
+   end
+   waitFrames(5)
+   for i,v in pairs(newdice) do
+      v.randomize()
+   end
+   for i,v in pairs(newdice) do
+      while v.resting == false do
+         waitFrames(3)
+      end
+      v.setLock(true)
+   end
+   for i,v in pairs(newdice) do
+      if v.getValue() == 1 or v.getValue() == 2 then
+         vval = 0
+      elseif v.getValue() == 3 or v.getValue() == 4 then
+         vval = 1
+      elseif v.getValue() == 5 or v.getValue() == 6 then
+         vval = 2
+      end
+      dicevaln = dicevaln + vval
+      diceval = diceval .. vval .."   "
+   end
+   printToAll(plrname .. " rolled " .. rollingfor .. ":", {255,255,255})
+   printToAll(diceval .. "Total: " .. dicevaln, {255,255,255})
+   if plrname == "Haunt" then
+      if dicevaln < omencounter.getValue() then
+         broadcastToAll("The Haunt Has Started!\nThe haunt revealer needs to\npress the start haunt button.", stringColorToRGB("Red"))
+      elseif dicevaln >= omencounter.getValue() then
+         printToAll("The Haunt has not started\nYou are safe, for now.", {255,255,255})
+      end
+      for i,v in pairs(newdice) do
+         v.setLock(false)
+      end
+      getObjectFromGUID("b6bcd9").call("returnDice")
+   end
+   currentlyrolling = false
+   return 1
+end
+
+function onObjectLeaveScriptingZone(zone, obj)
+   if roomstack == nil then
+      --add script to check if roomstack is gone
+   end
+   if obj.tag == "Card" and obj.held_by_color == nil then
+      for i,v in pairs(itemcard) do
+         if v == obj.getName() then
+            local newitem = itemstack.takeObject({
+               position       = {0,5,0},
+               flip           = true,
+            })
+            itemstack.shuffle()
+            newesttile[#newesttile].card = newitem
+            newesttile[#newesttile].pos = {-6.00, 4, -33.96}
+            newesttile[#newesttile].mainpack = itemstack
+         end
+      end
+      for i,v in pairs(omencard) do
+         if v == obj.getName() then
+            local newitem = omenstack.takeObject({
+               position       = {0,5,0},
+               flip           = true,
+            })
+            omenstack.shuffle()
+            newesttile[#newesttile].card = newitem
+            newesttile[#newesttile].pos = {2.11, 4, -34.00}
+            newesttile[#newesttile].mainpack = omenstack
+            for i,v in pairs(Physics.cast({origin = {42.00, 0, 50.00},direction = {0,1,0},type = 1,max_distance = 5,debug = true})) do -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...})
+               if v.hit_object.getDescription() == "Secrets of Survial" and v.hit_object.getStateId() ~= 102 then
+                  hauntstarted = true
+               end
+            end
+            if hauntstarted == false then
+               dice,newdice,plrname,rollingfor = {'70a741','afffe0','330bd8','533107','2810f3','f295e1'},{},"Haunt","Haunt"
+               for i,v in pairs(dice) do
+                  table.insert(newdice,getObjectFromGUID(v))
+                  getObjectFromGUID(v).setPositionSmooth({0,1.5*i,30},false,true)
+               end
+               startLuaCoroutine(self, "rolldice")
+            end
+         end
+      end
+      for i,v in pairs(eventcard) do
+         if v == obj.getName() then
+            local newitem = eventstack.takeObject({
+               position       = {0,5,0},
+               flip           = true,
+            })
+            eventstack.shuffle()
+            newesttile[#newesttile].card = newitem
+            newesttile[#newesttile].pos = {10.03, 4, -33.97}
+            newesttile[#newesttile].mainpack = eventstack
+         end
+      end
+   end
+end
+
+function waitFrames(frames)
+   while frames > 0 do
+      coroutine.yield(0)
+      frames = frames - 1
+   end
+end
+
+function setupwithbutton(info1)
+   plr,info = Player[info1[2]],info1[1]
+   if playercards[1] == nil then
+      table.insert(playercards,{card={info},plrdata=plr.steam_id}) --playercards table for all players
+      for i,v in pairs(getAllObjects()) do
+         if v.tag == "Figurine" and v.getName() == info.getName() then
+            printToAll(plr.steam_name .. " has registered as " .. info.getName(), stringColorToRGB(plr.color))
+            v.setLuaScript(figurinescript)
+            v.reload()
+            info1[3].destruct()
+         end
+      end
+   elseif playercards[1] ~= nil then
+      playerids = ""
+      for i,v in pairs(playercards) do
+         playerids = playerids .. " " .. tostring(v.plrdata)
+      end
+      if string.find(playerids,plr.steam_id) ~= nil then
+         for i,v in pairs(playercards) do
+            if v.plrdata == plr.steam_id then
+               changedchar = {true,i}
+            end
+         end
+      else
+         changedchar = {false}
+      end
+      if changedchar[1] == true then --player changing character
+         playercards[changedchar[2]].card = {info}
+         printToAll(plr.steam_name .. " changed to " .. info.getName(), stringColorToRGB(plr.color))
+         for i,v in pairs(getAllObjects()) do
+            if v.tag == "Figurine" and v.getName() == info.getName() then
+               v.setLuaScript(figurinescript)
+               v.reload()
+               info1[3].destruct()
+            end
+         end
+      elseif changedchar[1] == false then
+         table.insert(playercards,{card={info},plrdata=plr.steam_id})
+         for i,v in pairs(getAllObjects()) do
+            if v.tag == "Figurine" and v.getName() == info.getName() then
+               printToAll(plr.steam_name .. " has registered as " .. info.getName(), stringColorToRGB(plr.color))
+               v.setLuaScript(figurinescript)
+               v.reload()
+               info1[3].destruct()
+            end
+         end
+      end
+   end
+end
+
+function rollwithbuttons(info)
+   plr,msg = Player[info[1]],info[2]
+   if currentlyrolling == false then
+      if #getSeatedPlayers() ~= #playercards then --checks if everyone has registered first before going, will break script without.
+         printToAll("Someone has not registered yet",{255,255,255})
+         return false
+      end
+      if string.sub(msg,7) == "" then --makes sure someone is rolling something
+         printToColor("You must roll a number or stat", plr.color, {255,255,255})
+         return false
+      end
+      for i,v in pairs(playercards) do
+         if v.plrdata == plr.steam_id then --player who did command in chat compared with setup
+            if v.dice ~= nil then
+               for i,v in pairs(v.dice) do
+                  v.destruct()
+               end
+            end
+            v.dice,plrname,newdice = {},plr.steam_name,{}
+            local tab = v.card[1].getTable("stats")
+            if string.lower(string.sub(msg,7)) == "might" or string.lower(string.sub(msg,7)) == "knowledge" or string.lower(string.sub(msg,7)) == "speed" or string.lower(string.sub(msg,7)) == "sanity" then
+               local var = v.card[1].getVar(string.lower(string.sub(msg,7)) .. "Stat")
+               rollingfor = string.lower(string.sub(msg,7))
+               for i=1,var do
+                  local newobj11 = getObjectFromGUID("3805e7").clone({position={v.card[1].getPosition().x,i,v.card[1].getPosition().z}})
+                  newobj11.setName(plr.color .. " autoroll dice")
+                  newobj11.setColorTint(stringColorToRGB(plr.color))
+                  table.insert(newdice,newobj11)
+                  newobj11.interactable = false
+               end
+               v.dice,currentlyrolling = newdice,true
+               startLuaCoroutine(self,"rolldice")
+            elseif tonumber(string.sub(msg,7)) ~= nil then --checking for number instead of stat
+               if math.abs(tonumber(string.sub(msg,7))) > 10 then
+                  printToColor("You cannot roll that many dice", plr.color, {255,255,255})
+                  return false
+               end
+               local var = math.abs(tonumber(string.sub(msg,7)))
+               rollingfor = string.lower(string.sub(msg,7))
+               for i=1,var do
+                  local newobj11 = getObjectFromGUID("3805e7").clone({position={v.card[1].getPosition().x,i,v.card[1].getPosition().z}})
+                  newobj11.setName(plr.color .. " autoroll dice")
+                  newobj11.setColorTint(stringColorToRGB(plr.color))
+                  table.insert(newdice,newobj11)
+                  newobj11.interactable = false
+               end
+               v.dice,currentlyrolling = newdice,true
+               startLuaCoroutine(self,"rolldice")
+            end
+         end
+      end
+   end
+end
+figurinescript = [[currentTile = nil
+levels = {}
+disable = false
+nexttotile = false
+
+function onDropped()
+   dropped = true
+end
+
+function onCollisionStay(collision_info)
+   currentTile = collision_info.collision_object.getName()
+end
+
+function onCollisionEnter(collision_info)
+   draw(collision_info)
+end
+
+function onload()
+   ownercol = ""
+   dropped = false
+   roomstack = getObjectFromGUID("e8f5dd").getVar("roomstack")
+end
+
+function draw(collision_info)
+   nexttotile = false
+   local test111 = Physics.cast({
+      origin       = self.getPosition(),
+      direction    = {0,1,0},
+      type         = 3,
+      size         = {8,5,8},
+      max_distance = 1,
+   })
+   for i,v in pairs(test111) do
+      if v.hit_object.tag == "Card" or v.hit_object.tag == "Tile" then
+         nexttotile = true
+      end
+   end
+   if collision_info.collision_object.tag == "Surface" and level ~= nil and disable == false and nexttotile == true and self.held_by_color == nil and dropped == true then
+      if roomstack == nil then
+         local pos = getObjectFromGUID("e8f5dd").getVar("roomstackpos")
+         local test = Physics.cast({
+            origin       = {pos.x,pos.y-1,pos.z},
+            direction    = {0,1,0},
+            type         = 1,
+            max_distance = 2,
+            debug        = true,
+         }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+         if test[1] == nil or test[1].hit_object.tag ~= "Deck" then
+            printToAll("No tile deck in the draw pile or draw pile is not a deck of cards", stringColorToRGB("Red"))
+            return
+         elseif test[1] ~= nil then
+            for i,v in pairs(test) do
+               if v.hit_object.tag == "Deck" or v.hit_object.tag == "Card" or v.hit_object.tag == "Tile" then
+                  roomstack = v.hit_object
+               end
+            end
+         end
+      end
+      if string.find(string.gsub(roomstack.getObjects()[1].description,"/"," "),level[1]) ~= nil or string.find(string.gsub(roomstack.getObjects()[1].description,"/"," "),level[#level]) ~= nil then
+         tile = roomstack.takeObject({
+            position       = {roomstack.getPosition().x,roomstack.getPosition().y+10,roomstack.getPosition().z},
+         })
+         newtile = tile.clone({
+            position     = {self.getPosition().x,self.getPosition().y-4,self.getPosition().z},
+            snap_to_grid = true,
+         })
+         getObjectFromGUID("e8f5dd").setTable("newesttile", table.insert(getObjectFromGUID("e8f5dd").getTable("newesttile"),{tile=newtile}))
+         self.setPosition({self.getPosition().x,self.getPosition().y+6,self.getPosition().z})
+         self.setRotation({0,0,0})
+         startLuaCoroutine(self, "wait")
+         newtile.setTable("level", {level[1],level[#level]})
+         level = nil
+         dropped = false
+      elseif string.find(string.gsub(roomstack.getObjects()[1].description,"/"," "),level[1]) == nil or string.find(string.gsub(roomstack.getObjects()[1].description,"/"," "),level[#level]) == nil then
+         roomstack.takeObject({
+            position       = {-1.98, 2, -24.00},
+         })
+         draw(collision_info)
+      end
+   elseif collision_info.collision_object.tag ~= "Surface" and disable == false then
+      if collision_info.collision_object.getTable("level") ~= nil then
+         level = collision_info.collision_object.getTable("level")
+         self.setDescription(level[1] .. "/" .. level[#level])
+      end
+   end
+end
+
+function wait()
+   self.setLock(true)
+   newtile.flip()
+   waitFrames(60)
+   self.setPosition(newtile.getPosition())
+   self.setLock(false)
+   tile.destruct()
+   return 1
+end
+
+function waitFrames(frames)
+   while frames > 0 do
+      coroutine.yield(0)
+      frames = frames - 1
+   end
+end]]
