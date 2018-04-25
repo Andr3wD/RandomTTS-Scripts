@@ -1,0 +1,204 @@
+-- Made by DeathKnight1003 --
+function onChat(msg,plr)
+  if string.sub(msg,1,1) .. string.lower(string.sub(msg,2,9)) == "!votekick" and toggle == true then
+    if plrs == "" then
+      for i,v in pairs(playertable) do
+        plrs = plrs .. i .. ": " .. v.name .. "\n"
+      end
+    end
+    if string.sub(msg,11,12) == "" then
+      printToColor(plrs, plr.color, {255,255,255})
+    elseif string.sub(msg,11,12) ~= "" then
+      if string.find(string.sub(msg,11,12),"%a") ~= nil then --if has any letters
+        printToColor("You can only use numbers to kick", plr.color, stringColorToRGB("Red"))
+      elseif string.find(string.sub(msg,11,12),"%a") == nil then --if only numbers
+        if playertable[tonumber(string.sub(msg,11,12))] ~= nil then
+          for ind1,var1 in pairs(alreadyvoted) do
+            if plr.steam_id == var1.id then --player has voted
+              if var1.votedfor == playertable[tonumber(string.sub(msg,11,12))].id then --player has voted for player, and is trying to do it again
+                printToColor("You cannot vote for that player again", plr.color, stringColorToRGB("Red"))
+                return false
+              end
+            end
+          end
+          if playertable[tonumber(string.sub(msg,11,12))].kicknum == 0 then
+            for i,v in pairs(Player.getPlayers()) do
+              if v.steam_id == playertable[tonumber(string.sub(msg,11,12))].id and v.host == false then
+                votekicktimer({playerinfo=playertable[tonumber(string.sub(msg,11,12))]})
+              end
+            end
+          end
+          table.insert(alreadyvoted,{id=plr.steam_id,votedfor=playertable[tonumber(string.sub(msg,11,12))].id})
+          playertable[tonumber(string.sub(msg,11,12))].kicknum = playertable[tonumber(string.sub(msg,11,12))].kicknum + 1
+          printToAll("Someone has voted to kick " .. playertable[tonumber(string.sub(msg,11,12))].name .. "\n" .. playertable[tonumber(string.sub(msg,11,12))].kicknum .. "/" .. math.ceil(#playertable/2) .. " votes remaining", stringColorToRGB("Red"))
+          if playertable[tonumber(string.sub(msg,11,12))].kicknum/(math.ceil(#playertable/2)) == 1 then
+            for i,v in pairs(Player.getPlayers()) do
+              if v.steam_id == playertable[tonumber(string.sub(msg,11,12))].id and v.host == false then --banning player
+                table.insert(bannedplayers,{id=playertable[tonumber(string.sub(msg,11,12))].id,name=playertable[tonumber(string.sub(msg,11,12))].name})
+                startLuaCoroutine(self, "startcheckloop")
+                playertable[tonumber(string.sub(msg,11,12))].kicknum = 0
+                printToAll(playertable[tonumber(string.sub(msg,11,12))].name .. " has been kicked and\nwill be temp banned for 10 minutes", stringColorToRGB("Red"))
+                for ind1,var1 in pairs(alreadyvoted) do
+                  if plr.steam_id == var1.id then --player has voted
+                    if var1.votedfor == playertable[tonumber(string.sub(msg,11,12))].id then --player has voted for player, and is trying to do it again
+                      alreadyvoted[ind1].id = nil
+                      alreadyvoted[ind1].votedfor = nil
+                    end
+                  end
+                end
+                v.kick()
+              elseif v.steam_id == playertable[tonumber(string.sub(msg,11,12))].id and v.host == true then --if host voted for
+                playertable[tonumber(string.sub(msg,11,12))].kicknum = 0
+                broadcastToAll("You cannot kick the host, you totaly thought you could,\ndidn't you", stringColorToRGB("Red"))
+              end
+            end
+          end
+        end
+      end
+    end
+    return false
+  elseif string.sub(msg,1,1) .. string.lower(string.sub(msg,2,9)) == "!unbanall" and plr.admin == true then
+    printToAll("All players have been unbanned", {255,255,255})
+      bannedplayers = {}
+      return false
+  elseif string.sub(msg,1,1) .. string.lower(string.sub(msg,2,7)) == "!toggle" and plr.admin == true then
+    if toggle == true then
+      toggle = false
+      printToAll("Votekick has been turned off", {255,255,255})
+      return false
+    elseif toggle == false then
+      toggle = true
+      printToAll("Votekick has been turned on", {255,255,255})
+      return false
+    end
+  elseif string.sub(msg,1,1) .. string.lower(string.sub(msg,2,5)) == "!help" then
+    printToColor("!unbanall(unbans all players)\n!toggle(toggles on and off votekick)\n!votekick [number](votes to kick a player)", plr.color, stringColorToRGB("Red"))
+    return false
+  end
+end
+
+function onLoad(save_state)
+  playertable,timercount,plrs,bannedplayers,alreadyvoted,toggle,timernames = {},0,"",{},{},true,{}
+  checknewplayertimer()
+  for i,v in pairs(Player.getPlayers()) do
+    table.insert(playertable,{name=v.steam_name,id=v.steam_id,kicknum=0})
+  end
+  printToAll("Votekick has been added", {255,255,255})
+end
+
+function startcheckloop()
+  starttimer()
+  while #bannedplayers ~= 0 do
+    waitFrames(30)
+    for ind,var in pairs(bannedplayers) do
+      for i,v in pairs(Player.getPlayers()) do
+        if v.steam_id == var.id and v.host == false then
+          v.kick()
+        end
+      end
+    end
+  end
+return 1
+end
+
+function onPlayerChangedColor(col) --fix this and add timer to each vote, so it runs out in 10 minutes
+  compileplayers()
+end
+
+function compileplayers()
+  playertable,plrs = {},""
+    currentplayers = ""
+    for i,v in pairs(Player.getPlayers()) do --compile all steam ids
+      currentplayers = currentplayers .. " " .. tostring(v.steam_id)
+    end
+    for i,v in pairs(playertable) do
+      if string.find(tostring(v.id),currentplayers) == nil then --player does not exsist anymore
+        playertable[i] = nil --remove from table
+      end
+    end
+end
+
+function starttimer()
+  local name = uniquetimername()
+  Timer.create({
+    identifier     = name,
+    function_name  = "unban",
+    function_owner = self,
+    parameters     = {ipos=#bannedplayers,timernumber=name},
+    delay          = 600,
+    repetitions    = 1,
+  })
+end
+
+function checknewplayertimer()
+  local name = uniquetimername()
+  Timer.create({
+    identifier     = name,
+    function_name  = "checknewplayer",
+    function_owner = self,
+    delay          = 5,
+    repetitions    = 0,
+  })
+end
+
+function checknewplayer()
+  playertables = ""
+  for i,v in pairs(playertable) do
+    playertables = playertables .. " " .. tostring(v.id)
+  end
+  for i,v in pairs(Player.getPlayers()) do
+    if string.find(playertables,v.steam_id) == nil then
+      table.insert(playertable,{name=v.steam_name,id=v.steam_id,kicknum=0})
+    end
+  end
+end
+
+function votekicktimer(info)
+  printToAll("Starting 5min timer for current vote",  {255,255,255})
+  local name = uniquetimername()
+  Timer.create({
+    identifier     = name,
+    function_name  = "votetimer",
+    function_owner = self,
+    parameters     = {info.playerinfo},
+    delay          = 300,
+    repetitions    = 1,
+  })
+end
+
+function votetimer(plr)
+  plr.kicknum = 0
+  for i,v in pairs(alreadyvoted) do
+    if v.votedfor == plr.id then
+      alreadyvoted[i] = nil
+    end
+  end
+  if alreadyvoted == nil then
+    alreadyvoted = {}
+  end
+end
+
+function uniquetimername()
+  timercount = timercount + 1
+  table.insert(timernames,self.guid .. timercount)
+  return self.guid .. timercount
+end
+
+function unban(tbl)
+  Timer.destroy(tostring(tbl.timercount))
+  printToAll(bannedplayers[tbl.ipos].name .. " has been unbanned", stringColorToRGB("Red"))
+  table.remove(bannedplayers, tbl.ipos)
+end
+
+function waitFrames(frames)
+    while frames > 0 do
+    coroutine.yield(0)
+    frames = frames - 1
+    end
+end
+
+function onDestroy()
+  for i,v in pairs(timernames) do
+    Timer.destroy(tostring(v))
+  end
+end
