@@ -1,0 +1,54 @@
+function onScriptingButtonDown(ind,col)
+  if ind == 1 then
+    local handpos = Player[col].getPointerPosition()
+    local test = Physics.cast({
+      origin={handpos.x,handpos.y+1,handpos.z}, direction={0,-1,0}, type=1, debug=true, max_distance=1
+    })
+    local vobj,vpt = test[1].hit_object,test[1].point
+    if indc == 2 then
+      if rot.y == 90 or rot.y == 270 then
+        wid = math.abs(firstz-vobj.positionToLocal(vpt).z)*500
+        hig = math.abs(firstx-vobj.positionToLocal(vpt).x)*500
+      else
+        wid = math.abs(firstx-vobj.positionToLocal(vpt).x)*500
+        hig = math.abs(firstz-vobj.positionToLocal(vpt).z)*500
+      end
+      indc = 1
+      vobj.createInput({
+      input_function = "test", function_owner = self, label= "Test1", position={-(vobj.positionToLocal(vpt).x+firstx)/2,vobj.positionToLocal(vpt).y,(vobj.positionToLocal(vpt).z+firstz)/2}, width= wid,
+      height= hig, font_size=(math.abs(firstz-vobj.positionToLocal(vpt).z)+math.abs(firstx-vobj.positionToLocal(vpt).x))*50,color={255,255,255,1},alignment=1,rotation=rot
+      })
+      editNotebookTab({
+        index = notebookindex-1,
+        body  = [[self.createInput({
+        input_function = "putinputnamehere",function_owner=self,label= "Fadedtext", position={]] .. -(vobj.positionToLocal(vpt).x+firstx)/2 .. [[,]] .. vobj.positionToLocal(vpt).y .. [[,]] .. (vobj.positionToLocal(vpt).z+firstz)/2 .. [[}, width=]] .. wid .. [[,
+        height=]] .. hig .. [[, font_size=]] .. (math.abs(firstz-vobj.positionToLocal(vpt).z)+math.abs(firstx-vobj.positionToLocal(vpt).x))*50 .. [[,color={255,255,255,1},alignment=1,rotation={]] .. rot.x .. [[,]] .. rot.y .. [[,]] .. rot.z .. [[}})]],
+      })
+      return 1
+    end
+    firstz, firstx = vobj.positionToLocal(vpt).z, vobj.positionToLocal(vpt).x
+    indc = indc+1
+  elseif ind == 2 then
+    local handpos = Player[col].getPointerPosition()
+    local test = Physics.cast({
+      origin={handpos.x,handpos.y+1,handpos.z}, direction={0,-1,0}, type=1, debug=true, max_distance=1
+    })
+    local vobj,vpt = test[1].hit_object,test[1].point
+    vobj.removeInput(#vobj.getInputs()-1)
+  elseif ind == 3 then
+    rot = {x=0,y=rot.y+90,z=0}
+  end
+end
+
+function test(obj,plrcol,input,selected)
+
+end
+
+function onload()
+  notebookindex = addNotebookTab({
+    title = "Input creator",
+    body  = "",
+  })
+  indc = 1
+  rot={x=0,y=0,z=0}
+end
