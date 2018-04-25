@@ -1,0 +1,35 @@
+function onload()
+  card = false
+end
+
+function onCollisionEnter(info)
+  if info.collision_object.tag == "Card" then
+    card = true
+    cardt = info.collision_object.guid
+  end
+end
+
+function onCollisionExit(info)
+  if info.collision_object.tag == "Card" then
+    card = false
+    cardt = nil
+  end
+end
+
+--or
+
+function onload()
+  card = false
+end
+
+function onCollisionEnter(info)
+  if info.collision_object.tag == "Card" then
+    card = true
+  end
+end
+
+function onCollisionExit(info)
+  if info.collision_object.tag == "Card" then
+    card = false
+  end
+end
