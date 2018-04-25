@@ -1,0 +1,84 @@
+--Created by DeathKnight --
+function onChat(msg,plr)
+  if string.sub(msg,1,1) .. string.lower(string.sub(msg,2,5)) == "!poll" then --start poll
+    if pollrunning == false then
+      if string.sub(msg,7) == "" then
+        printToColor("You must type the name of your poll first", plr.color, {255,255,255})
+      elseif string.sub(msg,7) ~= "" then
+        pollmsg = string.sub(msg,7)
+        pollrunning = true
+        printToAll(plr.steam_name .. " started a poll for:\n" .. pollmsg .. "\nstarting timer for 5 minutes", {255,255,255})
+        startpolltimer()
+      end
+    elseif pollrunning == true then
+      printToColor("A poll is already running\ntry again when it is over", plr.color, {255,255,255})
+    end
+    return false
+  elseif string.sub(msg,1,1) .. string.lower(string.sub(msg,2,5)) == "!vote" then --v ote for current poll
+    if pollmsg == nil then
+      printToColor("A poll must be started first", plr.color, {255,255,255})
+      return false
+    end
+    voteplayers = ""
+    for i,v in pairs(votes) do
+      voteplayers = voteplayers .. " " ..  v.player.steam_id
+    end
+    if string.find(voteplayers,plr.steam_id) ~= nil then --if already voted then stop them
+      printToColor("You have already voted", plr.color, {255,255,255})
+      return false
+    end
+    if string.sub(msg,7) == "" then
+      printToColor("You must vote something", plr.color, {255,255,255})
+    elseif string.sub(msg,7) ~= "" then
+      printToColor("You have voted: " .. string.sub(msg,7) , plr.color, {255,255,255})
+      table.insert(votes,{votemsg=string.sub(msg,7),player=plr})
+      if #votes == #Player.getPlayers() then
+        pollend()
+      end
+    end
+    return false
+  elseif string.sub(msg,1,1) .. string.lower(string.sub(msg,2,11)) == "!silentvote" then --anon voting
+    printToAll(plr.steam_name .. " has toggled silentvote", {255,255,255})
+    if silentvote == true then
+      silentvote = false
+      broadcastToAll("SILENTVOTE HAS BEEN DISABLED", stringColorToRGB("Red"))
+    elseif silentvote == false then
+      silentvote = true
+      broadcastToAll("SILENTVOTE HAS BEEN ENABLED", stringColorToRGB("Red"))
+    end
+    return false
+  end
+end
+
+function onload()
+  votes,pollrunning,timern,silentvote,voteplayers,concatvotes,pollmsg = {},false,0,true,"randomtextkappa","",nil
+  printToAll("Easy poll creator has been loaded", {255,255,255})
+end
+
+function startpolltimer()
+  timern = timern + 1
+  timername = self.getGUID() .. timern
+  Timer.create({
+    identifier     = timername,
+    function_name  = "pollend",
+    function_owner = self,
+    delay          = 5,
+    repetitions    = 0,
+  })
+end
+
+function pollend(info)
+   Timer.destroy(tostring(timername))
+  concatvotes = ""
+  if silentvote == false then
+    for i,v in pairs(votes) do
+      concatvotes = concatvotes .. "\n" .. v.player.steam_name .. ": " .. v.votemsg
+    end
+  elseif silentvote == true then
+    for i,v in pairs(votes) do
+      concatvotes = concatvotes .. "\n" .. v.votemsg
+    end
+  end
+    printToAll("The poll has ended, here are the votes:" .. concatvotes , {255,255,255})
+    pollrunning,pollmsg,votes = false,nil,{}
+end
