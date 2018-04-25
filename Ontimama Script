@@ -1,0 +1,339 @@
+--[[ Pieces have the script setup similar to:
+pawn = true
+pos = {x=5,y=1}
+col = "blue"
+master = false
+
+Card Plates:
+
+invert = false
+
+function onCollisionEnter(info)
+  if info.collision_object.tag == "Card" and info.collision_object.name ~= "" then
+    local obj = info.collision_object
+    obj.setPosition(self.getPosition())
+    obj.setRotation(self.getRotation())
+    local tbl = obj.getTable("movement")
+    if invert == true then
+      local newtbl = {}
+      for i,v in pairs(tbl) do
+        table.insert(newtbl,{x=v.x*-1,y=v.y*-1})
+      end
+      Global.setTable("tbl11", newtbl)
+      Global.setVar("currentcardguid",obj.guid)
+    else
+      Global.setTable("tbl11", tbl)
+      Global.setVar("currentcardguid",obj.guid)
+    end
+  end
+end
+
+]]
+function onload()
+  cardpos = {red={"7ff320","84dd28","9e773a"},blue={"422ad9","2ad4b1","8e94db"}}
+  savelog = {}
+  for i,v in pairs(getAllObjects()) do
+    if v.getLuaScript() == "" and v.getName() == "" and v.tag ~= "Bag" and v.tag ~= "Deck" then
+      v.interactable = false
+    end
+  end
+  activemovementdisplay = {}
+  blue = {"a093e4","eedb76","13b99c","3d11e1","3430d6"}
+  red = {"10b302","e94c0e","f0410e","f26bd8","021878"}
+  --starts from blue, x.y
+  posmap = {{{-7.03, 18.44, -6.94},{-7.03, 18.44, -3.44},{-7.03, 18.44, 0.13},{-7.03, 18.44, 3.55},{-7.03, 18.44, 7.01}},
+  {{-3.70, 18.44, -6.88},{-3.70, 18.44, -3.66},{-3.70, 18.44, 0.04},{-3.70, 18.44, 3.55},{-3.70, 18.44, 7.07}},
+  {{-0.07, 18.44, -6.82},{-0.07, 18.44, -3.64},{-0.07, 18.44, -0.03},{-0.07, 18.44, 3.47},{0.07, 18.44, 7.11}},
+  {{3.43, 18.44, -6.85},{3.43, 18.44, -3.60},{3.43, 18.44, -0.06},{3.43, 18.44, 3.52},{3.60, 18.44, 7.08}},
+  {{6.97, 18.44, -7.00},{6.97, 18.44, -3.52},{7.07, 18.44, -0.02},{7.12, 18.44, 3.66},{7.12, 18.44, 7.03}}}
+  piecemap = {}
+  for i=1,5 do
+    piecemap[i] = {}
+    for ind=1,5 do
+      piecemap[i][ind] = {piece="none",master=false}
+    end
+  end
+  for i,v in pairs(blue) do
+    local obj = getObjectFromGUID(v)
+    local pos = obj.getTable("pos")
+    piecemap[pos.x][pos.y].piece = obj.getVar("col")
+    piecemap[pos.x][pos.y].master = obj.getVar("master")
+    piecemap[pos.x][pos.y].obj = obj
+  end
+  for i,v in pairs(red) do
+    local obj = getObjectFromGUID(v)
+    local pos = obj.getTable("pos")
+    piecemap[pos.x][pos.y].piece = obj.getVar("col")
+    piecemap[pos.x][pos.y].master = obj.getVar("master")
+    piecemap[pos.x][pos.y].obj = obj
+  end
+end
+
+function checkspots()
+  local prevg = Physics.getGravity()
+  Physics.setGravity({0,-1000,0})
+  for i,v in pairs(posmap) do --x pos
+    for ind,var in pairs(v) do --y pos
+      --spawn object with correct scale and position=v with callback of putstufff() and params of {x=i,y=ind}
+      waitFrames(1)
+      spawnObject({
+        type           = "BlockSquare",
+        position       = {var[1],var[2]+3,var[3]},
+        scale          = {3.3,0.001,3.1},
+        callback       = "putstufff",
+        callback_owner = self,
+        params         = {x=i,y=ind},
+      })
+    end
+  end
+  waitFrames(60)
+  Physics.setGravity(prevg)
+  updatepos({false})
+  return 1
+end
+
+function putstufff(obj,info)
+  script =
+  [[pos={x=]] .. info.x .. ",y=" .. info.y .. [[}
+
+  function onCollisionEnter(info)
+    local obj = info.collision_object
+    if obj.getVar("pawn") == true then
+      obj.setTable("pos",pos)
+    end
+    self.destruct()
+  end
+  ]]
+  obj.setLuaScript(script)
+end
+
+
+function resetgame()
+  local currentdeck
+  for i,v in pairs(getAllObjects()) do
+    if v.tag == "Deck" or v.tag == "Card" then
+      v.setPosition({24.65, 18, -0.02})
+      v.setRotation({0.00, 180.00, 180.00})
+    end
+  end
+  for i=1,getObjectFromGUID("2f4c75").getQuantity() do
+    getObjectFromGUID("2f4c75").takeObject({
+      position       = {0,20,0},
+    })
+  end
+  for i=1,getObjectFromGUID("33efea").getQuantity() do
+    getObjectFromGUID("33efea").takeObject({
+      position       = {0,20,0},
+    })
+  end
+  waitFrames(30)
+  for i,v in pairs(blue) do
+    local obj = getObjectFromGUID(v)
+    obj.setPosition(posmap[i][1])
+    obj.setRotation({0,0,0})
+    obj.setTable("pos", {x=i,y=1})
+  end
+  for i,v in pairs(red) do
+    local obj = getObjectFromGUID(v)
+    obj.setPosition(posmap[i][5])
+    obj.setRotation({0,0,0})
+    obj.setTable("pos", {x=i,y=5})
+  end
+  for i,v in pairs(getAllObjects()) do
+    if v.tag == "Deck" then
+      v.shuffle()
+      currentdeck = v
+    end
+  end
+  currentcardguid = nil
+  tbl11 = {}
+  local temp1 = 0
+  updatepos({false})
+  for i,v in pairs(cardpos) do
+    for ind,var in pairs(v) do
+      if ind == 3 then
+        break
+      end
+      local rot = {}
+      if i == "red" then
+        rot = {x=0,y=270,z=0}
+      elseif i == "blue" then
+        rot = {x=0,y=90,z=0}
+      end
+      currentdeck.takeObject({
+        position       = getObjectFromGUID(var).getPosition(),
+        rotation       = rot,
+        flip           = true,
+      })
+    end
+  end
+  local rot
+  if string.lower(currentdeck.getObjects()[1].description) == "red" then
+    rot = {x=0,y=270,z=0}
+  elseif string.lower(currentdeck.getObjects()[1].description) == "blue" then
+    rot = {x=0,y=90,z=0}
+  end
+  currentdeck.takeObject({
+    position       = getObjectFromGUID(cardpos[string.lower(currentdeck.getObjects()[1].description)][3]).getPosition(),
+    rotation       = rot,
+    flip           = true,
+  })
+  return 1
+end
+
+function onObjectPickedUp(col,obj)
+  if obj.getVar("pawn") == true and string.lower(col) == obj.getVar("col") then
+    updatepos({false})
+    displaymovement({obj.getTable("pos"),obj})
+  end
+end
+
+function displaymovement(info)
+  if tbl11 ~= nil then
+    for i,v in pairs(tbl11) do
+      local displpos = {x=info[1].x+v.x,y=info[1].y+v.y}
+      if displpos.x > 5 or displpos.y > 5 or displpos.y < 1 or displpos.x < 1 then
+      elseif piecemap[displpos.x][displpos.y].piece == "none" or piecemap[displpos.x][displpos.y].piece ~= info[2].getVar("col") then
+        local newp = posmap[displpos.x][displpos.y]
+        spawnObject({
+          type           = "BlockSquare",
+          position       = {newp[1],newp[2]-1,newp[3]} ,
+          callback_owner = self,
+          callback = "setstuff",
+          params = {posmap[displpos.x][displpos.y],info[2],displpos},
+          scale = {3.3,0.001,3.1},
+        })
+      end
+    end
+  end
+end
+
+function updatepos(info1)
+  if info1[1] ~= false then
+    if getObjectFromGUID(currentcardguid) ~= nil then
+      if info1[1] == "blue" then
+        for i,v in pairs(cardpos.red) do
+          if getObjectFromGUID(v).getVar("card") == false then
+            getObjectFromGUID(currentcardguid).setPosition(getObjectFromGUID(v).getPosition())
+          end
+        end
+        for i,v in pairs(cardpos.blue) do
+          if getObjectFromGUID(v).getVar("card") == false and getObjectFromGUID("8e94db").getVar("cardt") ~= nil then
+            getObjectFromGUID(getObjectFromGUID("8e94db").getVar("cardt")).setPosition(getObjectFromGUID(v).getPosition())
+          end
+        end
+      elseif info1[1] == "red" then
+        for i,v in pairs(cardpos.blue) do
+          if getObjectFromGUID(v).getVar("card") == false then
+            getObjectFromGUID(currentcardguid).setPosition(getObjectFromGUID(v).getPosition())
+          end
+        end
+        for i,v in pairs(cardpos.red) do
+          if getObjectFromGUID(v).getVar("card") == false and getObjectFromGUID("9e773a").getVar("cardt") ~= nil then
+            getObjectFromGUID(getObjectFromGUID("9e773a").getVar("cardt")).setPosition(getObjectFromGUID(v).getPosition())
+          end
+        end
+      end
+      getObjectFromGUID(currentcardguid).setRotation(info1[2])
+      currentcardguid = ""
+      tbl11 = {}
+    end
+  end
+  for i,v in pairs(activemovementdisplay) do
+    v.destruct()
+  end
+  activemovementdisplay = {}
+  for i,v in pairs(blue) do
+    if getObjectFromGUID(v) ~= nil then
+      local obj = getObjectFromGUID(v)
+      local pos = obj.getTable("pos")
+      if piecemap[pos.x][pos.y].piece == "red" and piecemap[pos.x][pos.y].obj ~= nil then
+        getObjectFromGUID("33efea").putObject(piecemap[pos.x][pos.y].obj)
+      end
+    end
+  end
+  for i,v in pairs(red) do
+    if getObjectFromGUID(v) ~= nil then
+      local obj = getObjectFromGUID(v)
+      local pos = obj.getTable("pos")
+      if piecemap[pos.x][pos.y].piece == "blue" and piecemap[pos.x][pos.y].obj ~= nil then
+        getObjectFromGUID("2f4c75").putObject(piecemap[pos.x][pos.y].obj)
+      end
+    end
+  end
+  piecemap = {}
+  for i=1,5 do
+    piecemap[i] = {}
+    for ind=1,5 do
+      piecemap[i][ind] = {piece="none",master=false}
+    end
+  end
+  for i,v in pairs(blue) do
+    if getObjectFromGUID(v) ~= nil then
+      local obj = getObjectFromGUID(v)
+      local pos = obj.getTable("pos")
+      piecemap[pos.x][pos.y].piece = obj.getVar("col")
+      piecemap[pos.x][pos.y].master = obj.getVar("master")
+      piecemap[pos.x][pos.y].obj = obj
+    end
+  end
+  for i,v in pairs(red) do
+    if getObjectFromGUID(v) ~= nil then
+      local obj = getObjectFromGUID(v)
+      local pos = obj.getTable("pos")
+      piecemap[pos.x][pos.y].piece = obj.getVar("col")
+      piecemap[pos.x][pos.y].master = obj.getVar("master")
+      piecemap[pos.x][pos.y].obj = obj
+    end
+  end
+end
+
+function setstuff(obj,info)
+  obj.setColorTint(stringColorToRGB("White"))
+  script =
+  [[setpos = {]] .. table.concat(info[1],",") .. [[}
+
+  fig = getObjectFromGUID("]] .. info[2].guid .. [[")
+
+  newpos = {x=]] .. info[3].x .. [[,y=]] .. info[3].y .. [[}
+
+  function onObjectPickedUp(col,obj)
+    if obj == self then
+      fig.setRotation({0,0,0})
+      fig.setPosition(setpos)
+      fig.resting = true
+      self.destruct()
+      fig.setTable("pos", newpos)
+      if fig.getVar("col") == "blue" then --taking it the easy way out, shh
+        Global.call("updatepos",{"blue",{0.00, 270.00, 0.00}})
+      elseif fig.getVar("col") == "red" then
+        Global.call("updatepos",{"red",{0.00, 90.00, 0.00}})
+      end
+    end
+  end
+
+  function onCollisionEnter(info)
+    if info.collision_object.getVar("pawn") == true and fig.getVar("col") == info.collision_object.getVar("col") then
+      fig.setRotation({0,0,0})
+      fig.setPosition(setpos)
+      fig.resting = true
+      self.destruct()
+      fig.setTable("pos", newpos)
+      if fig.getVar("col") == "blue" then --taking it the easy way out, shh
+        Global.call("updatepos",{"blue",{0.00, 270.00, 0.00}})
+      elseif fig.getVar("col") == "red" then
+        Global.call("updatepos",{"red",{0.00, 90.00, 0.00}})
+      end
+    end
+  end
+  ]]
+  obj.setLuaScript(script)
+  table.insert(activemovementdisplay,obj)
+end
+
+function waitFrames(frames)
+  while frames > 0 do
+  coroutine.yield(0)
+  frames = frames - 1
+  end
+end
