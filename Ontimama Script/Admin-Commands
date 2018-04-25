@@ -1,0 +1,30 @@
+function onload()
+  self.createButton({
+    click_function = "resetgame",
+    function_owner = self,
+    position       = {0,0.5,0.25},
+    width          = 500,
+    height         = 250,
+    label = "Reset",
+  })
+  self.createButton({
+    click_function = "updateboard",
+    function_owner = self,
+    position       = {0,0.5,-0.25},
+    width          = 500,
+    height         = 250,
+    label = "Update",
+  })
+end
+
+function resetgame(obj,col)
+  if Player[col].admin == true then
+    startLuaCoroutine(Global, "resetgame")
+  end
+end
+
+function updateboard(obj,col)
+  if Player[col].admin == true then
+    startLuaCoroutine(Global,"checkspots")
+  end
+end
