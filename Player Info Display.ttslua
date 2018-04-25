@@ -1,0 +1,60 @@
+----------- Made by DeathKnight1003 ---------------
+function onload()
+   printtoeveryone = false --will print to everyone reguardless of status
+   printonlytohost = false --will print to all admins if false, including host
+end
+
+function onPlayerConnect(id)
+   connectplr = id
+   WebRequest.get("http://steamcommunity.com/profiles/" .. id.steam_id .. "/", self, "webcall")
+end
+
+function webcall(info)
+   if info.is_error == true or info.is_done == false then
+      printtoadmins("Warning: webrequest errored or was not finished.")
+      return
+   end
+   if string.find(info.text,"This profile is private.") ~= nil then
+      printtoadmins(connectplr.steam_name .. " has a private profile.",stringColorToRGB("Red"))
+   elseif string.find(info.text,[==[<div class="profile_ban">]==]) ~= nil then
+      local n,s = string.find(info.text,[==[<div class="profile_ban">]==])
+      local e,n = string.find(info.text,[==[game ban on record]==])
+      local n,e1 = string.find(info.text,[==[%s>Info</a></span>]==])
+      local s2,e2 = string.find(info.text, "%s%d*", e1+20)
+      printtoadmins(connectplr.steam_name .. " has " .. string.sub(info.text,s+3,e-2) .. " bans on record.\nLast ban was: " .. string.sub(info.text,s2,e2) .. " day(s) ago",stringColorToRGB("Red"))
+      WebRequest.get("http://steamcommunity.com/profiles/" .. connectplr.steam_id .. "/games/?tab=all", self, "webcall1")
+   elseif string.find(info.text,[==[<div class="profile_ban">]==]) == nil then
+      WebRequest.get("http://steamcommunity.com/profiles/" .. connectplr.steam_id .. "/games/?tab=all", self, "webcall1")
+   end
+end
+
+function webcall1(info)
+   if string.find(info.text,"Tabletop Simulator") ~= nil then
+      local n,e = string.find(info.text,"Tabletop Simulator")
+      local n,e1 = string.find(info.text, [==["hours_forever":"]==], e)
+      local s2,e2 = string.find(info.text, [[%b""]], e1)
+      printtoadmins(connectplr.steam_name .. " has " .. string.sub(info.text,s2+1,e2-1) .. " hours on TTS",stringColorToRGB("Yellow"))
+   else
+      printtoadmins("Warning: could not find tts playtime",stringColorToRGB("Red"))
+   end
+end
+
+function printtoadmins(msg,col)
+   if printonlytohost == true then
+      for i,v in pairs(Player.getPlayers()) do
+         if v.host == true then
+            v.print(msg,col)
+         end
+      end
+   elseif printonlytohost == false then
+      for i,v in pairs(Player.getPlayers()) do
+         if v.admin == true then
+            v.print(msg,col)
+         end
+      end
+   elseif printtoeveryone == true then
+      for i,v in pairs(Player.getPlayers()) do
+         v.print(msg,col)
+      end
+   end
+end
