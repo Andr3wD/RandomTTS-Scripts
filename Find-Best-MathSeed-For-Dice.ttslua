@@ -1,0 +1,46 @@
+function onload()
+  range = {10000,50000}
+  dice = 20
+  favorableoutcome = 20
+  roll = {}
+  levels = 3
+startLuaCoroutine(self, "findit")
+end
+
+function findit()
+local num = range[1]
+  for i=1,range[2]-range[1] do
+    num = num + 1
+    math.randomseed(num)
+    local count = 0
+    while math.random(1,dice) == favorableoutcome do
+      waitFrames(1)
+      count = count + 1
+      if count > 1 then
+        roll[#roll].count = count
+      else
+        table.insert(roll,{num=num,count=count})
+      end
+    end
+    if (range[2]-range[1])/i == 2 then
+      print("halfway")
+    end
+  end
+  --local rolls = table.concat(roll," ")
+  table.sort(roll, function(a,b) return a.count > b.count end)
+  print(roll[1].count)
+  print(roll[1].num)
+  for i,v in pairs(roll) do
+    if v.count == roll[1].count then
+      print(v.num)
+    end
+  end
+return 1
+end
+
+function waitFrames(frames)
+    while frames > 0 do
+    coroutine.yield(0)
+    frames = frames - 1
+    end
+end
