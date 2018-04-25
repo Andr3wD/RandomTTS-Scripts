@@ -1,0 +1,5 @@
+--Follow the format:
+pawn = true
+master = true
+pos = {x=3,y=5}
+col = "red"
