@@ -1,0 +1,124 @@
+function onload()
+  gamestart = false
+  self.createButton({
+    click_function = "startgame",
+    function_owner = self,
+    label          = "Start",
+    width          = 800,
+    height         = 800,
+    font_size      = 350,
+    position = {0,-0.2,0},
+    rotation = {180,180,0}
+  })
+end
+
+function onCollisionStay(collision_info)
+  if gamestart == false then
+    mothercollision = collision_info
+  end
+end
+
+function startgame(obj,col)
+  gamestart = true
+  startLuaCoroutine(self, "startactualgame")
+end
+
+function startactualgame()
+  self.removeButton(0)
+  local info = spawnObject({
+    type           = "reversi_chip",
+    position       = {0,100,0},
+    scale          = {0,0,0},
+    callback       = "setup",
+    callback_owner = self,
+  })
+  waitFrames(10)
+  info.call("startup",{self,newstring,mothercollision})
+return 1
+end
+
+script =
+[[
+function startup(info)
+  allcards = {}
+  deck = info[1]
+  newstring = info[2]
+  mothercollision = info[3]
+startLuaCoroutine(self, "startup1")
+end
+function startup1(info)
+  level = 0
+  cardn = 0
+  --local deck = info[1]
+  flipn = {1,3,6,10,15,21,28}
+  local pos = deck.getPosition()
+  deck.shuffle()
+  for i=1,28 do
+    cardn = cardn + 1
+    for ind,var in pairs(flipn) do
+      if i == var then
+        fliptf = true
+        break
+      else
+        fliptf = false
+      end
+    end
+    waitFrames(2)
+    local newobj = deck.takeObject({
+      position       = {pos.x+(deck.getTransformForward().x*(deck.getScale().x*3))+(math.abs(deck.getTransformForward().z)*(deck.getScale().z)*(level*2.5))+(deck.getTransformForward().x*(deck.getScale().x)*(cardn*0.75)),pos.y+0.1,pos.z+(deck.getTransformForward().z*(deck.getScale().z*3))+(deck.getTransformForward().x*(deck.getScale().x)*(level*2.5))+(deck.getTransformForward().z*(deck.getScale().z)*(cardn*0.75))},
+      flip           = fliptf,
+    })
+    if fliptf == true then
+      level = level + 1
+      cardn = 0
+    end
+    table.insert(allcards,newobj)
+    newobj.setTable("mothercollision", mothercollision)
+    newobj.setLuaScript(newstring)
+  end
+  for i,v in pairs(allcards) do
+    if v ~= nil then
+      v.setLuaScript("")
+    end
+  end
+  self.destruct()
+  return 1
+end
+
+function waitFrames(frames)
+    while frames > 0 do
+    coroutine.yield(0)
+    frames = frames - 1
+    end
+end
+
+-- Deck.getObjects() returns:
+-- {{int index, string nickname, string description, string guid, string lua_script}, ...}
+]]
+
+newstring =
+[[
+function onCollisionEnter(info)
+  if mothercollision == nil then
+    self.destruct()
+  end
+  if info.collision_object ~= mothercollision.collision_object and info.collision_object.tag ~= "Surface" and info.collision_object.tag ~= "Card" and info.collision_object.tag ~= "Deck" then
+    self.destruct()
+  end
+end
+]]
+
+function setup(info)
+  printToAll("Solitare has been initialized.", {1,1,1})
+  info.setLuaScript(script)
+  info.setLock(true)
+  info.interactable = false
+  --info.call("startup",{self})
+end
+
+function waitFrames(frames)
+    while frames > 0 do
+    coroutine.yield(0)
+    frames = frames - 1
+    end
+end
