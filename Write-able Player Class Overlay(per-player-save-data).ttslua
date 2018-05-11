@@ -1,0 +1,97 @@
+function onload(info)
+   if info ~= "" and info ~= nil then
+      plrsavedata = JSON.decode(info)[1]
+   else
+      plrsavedata = {}
+   end
+   oldplr = Player
+   colors = {White="White",Green="Green",Blue="Blue",Orange="Orange",Yellow="Yellow",Pink="Pink",Purple="Purple",Red="Red",Teal="Teal",Brown="Brown"}
+   Player = {}
+   for i,v in pairs(colors) do
+      local class = {__index=function(tbl,key,val) --pci
+         if pcall(function(tbl,key,val,pcall1) --ci
+                     if oldplr[v][key] and pcall1 == false then
+                        return oldplr[v][key]
+                     end
+                  end,tbl,key,val,true) ~= false then
+            return oldplr[v][key]
+         end
+      end,__newindex=function(tbl,key,val) --pcni
+         if pcall(function(tbl,key,val,pcall1) --cni
+                     if oldplr[v][key] and pcall1 == false and type(oldplr[v][key]) ~= "function" then
+                        oldplr[v][key] = val
+                     end
+                  end,tbl,key,val,true) ~= false then
+            oldplr[v][key] = val
+            return
+         else
+            rawset(tbl,key,val)
+         end
+      end}
+      Player[v] = setmetatable({},class)
+   end
+   prevseated = {}
+   for i,v in pairs(getSeatedPlayers()) do
+      table.insert(prevseated,{id=tostring(Player[v].steam_id),col=v})
+   end
+end
+
+function onScriptingButtonDown(ind,col)
+   if ind == 1 then
+      print(Player[col].newvar)
+      Player[col].lift_height = 1
+      print("lift = " .. Player[col].lift_height)
+      Player[col].changeColor("Grey")
+   elseif ind == 2 then
+      Player[col].newvar = 10
+   elseif ind == 3 then
+      log(Player[col])
+   end
+end
+
+function newplrclass(col)
+   local class = {__index=function(tbl,key,val) --pci
+      if pcall(function(tbl,key,val,pcall1) --ci
+                  if oldplr[col][key] and pcall1 == false then
+                     return oldplr[col][key]
+                  end
+               end,tbl,key,val,true) ~= false then
+         return oldplr[col][key]
+      end
+   end,__newindex=function(tbl,key,val) --pcni
+      if pcall(function(tbl,key,val,pcall1) --cni
+                  if oldplr[col][key] and pcall1 == false and type(oldplr[col][key]) ~= "function" then
+                     oldplr[col][key] = val
+                  end
+               end,tbl,key,val,true) ~= false then
+         oldplr[col][key] = val
+         return
+      else
+         rawset(tbl,key,val)
+      end
+   end}
+   return class
+end
+
+function onPlayerChangeColor(col)
+   if col == "Grey" then
+      for i,v in pairs(prevseated) do
+         if col == v.col then
+            return
+         end
+         plrsavedata[v.id] = Player[v.col]
+         Player[v.col] = {}
+         Player[v.col] = setmetatable({},newplrclass(v.col))
+         table.remove(prevseated, i)
+      end
+   elseif col ~= "Grey" and col ~= "Black" then
+      table.insert(prevseated,{id=tostring(Player[col].steam_id),col=col})
+      if plrsavedata[tostring(Player[col].steam_id)] ~= nil then
+         Player[col] = setmetatable(plrsavedata[tostring(Player[col].steam_id)],newplrclass(col))
+      end
+   end
+end
+
+function onSave()
+   return JSON.encode({plrsavedata})
+end
