@@ -1,3 +1,24 @@
+--[[This allows the Player class to write new variables, and then read them. This is an overlay, so everything that the Player class could do before is still there.
+EX:
+Lets say I am sitting in the white color spot.
+Print(Player.White.lift_height)
+> (Whatever the lift height of the player at the time is will be displayed)
+Player.White.lift_height = 1
+Print(Player.White.lift_height)
+> 1
+Player.White.changeColor("Grey")
+> <playername> is color White.
+Player.White.newvar = 10
+print(Player.White.newvar)
+> 10
+
+
+Example End.
+Added the automatic storing of player data based on each individual player's steam id 
+player data will be loaded when the player chooses a color. Similarly, the player's data will be saved 
+when they leave the game or change to color Grey.
+]]
+
 function onload(info)
    if info ~= "" and info ~= nil then
       plrsavedata = JSON.decode(info)[1]
@@ -33,19 +54,6 @@ function onload(info)
    prevseated = {}
    for i,v in pairs(getSeatedPlayers()) do
       table.insert(prevseated,{id=tostring(Player[v].steam_id),col=v})
-   end
-end
-
-function onScriptingButtonDown(ind,col)
-   if ind == 1 then
-      print(Player[col].newvar)
-      Player[col].lift_height = 1
-      print("lift = " .. Player[col].lift_height)
-      Player[col].changeColor("Grey")
-   elseif ind == 2 then
-      Player[col].newvar = 10
-   elseif ind == 3 then
-      log(Player[col])
    end
 end
 
