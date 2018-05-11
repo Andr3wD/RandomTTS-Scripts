@@ -8,6 +8,10 @@ Print(Player.White.lift_height)
 > 1
 Player.White.changeColor("Grey")
 > <playername> is color White.
+Player.White.newvar = 10
+print(Player.White.newvar)
+> 10
+
 
 Example End.
 The only thing that might want to be added is the automatic storing of player data based on each individual player's steam id 
