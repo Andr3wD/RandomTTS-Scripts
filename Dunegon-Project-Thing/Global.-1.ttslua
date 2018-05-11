@@ -1,0 +1,695 @@
+function onload()
+  tilesbeforemob = 7
+  alleffecttiles = {}
+  --normloottable = {}
+  normalmonster={tileeffect={lasts=5,color={1,0.5,0},type="fire",wearoff=3,maxamount=10,basestat=2,dmgpercent=1,priority="close"},
+  attackanimation="melee",attackrange=2,attackshape={{{type="nothing"},{type="attack"},{type="nothing"}}},attacksperturn=1,attacktype="close",exp={1,5},defaulthp=15,health=15,speed=1,attackdamage=1,sight=3,gold={3,7},mainguid="8796a5",name="Normal",maxspawn={0,0,0,1,1,2,2},chancetowander=0,activated=false} --chancetomove-higher=lowerchance,0=notwander
+  Mage={defaulthp=15,attackanimation="melee",attackrange=6,attackshape={{{type="nothing"},{type="attack"},{type="nothing"}},{{type="attack"},{type="nothing"},{type="attack"}}},attacksperturn=1,attacktype="close",health=10,speed=1,attack=5,sight=5,gold=10,mainguid="8796a5",name="Mage",maxspawn={0,0,0,0,0,1,1,1,2,2},chancetowander=0,activated=false}
+  --attacktype = "close" or "far"
+  monstertypes = {normalmonster,normalmonster}
+  floortile = getObjectFromGUID("3b92a2")
+
+  make_maze()
+end
+math.randomseed( os.time() )
+-- Fisher-Yates shuffle from http://santos.nfshost.com/shuffling.html
+function shuffle(t)
+  for i = 1, #t - 1 do
+    local r = math.random(i, #t)
+    t[i], t[r] = t[r], t[i]
+  end
+end
+-- builds a width-by-height grid of trues
+function initialize_grid(w, h)
+  local a = {}
+  for i = 1, h do
+    table.insert(a, {})
+    for j = 1, w do
+      table.insert(a[i], true)
+    end
+  end
+  return a
+end
+-- average of a and b
+function avg(a, b)
+  return (a + b) / 2
+end
+dirs = {
+  {x = 0, y = -2}, -- north
+  {x = 2, y = 0}, -- east
+  {x = -2, y = 0}, -- west
+  {x = 0, y = 2}, -- south
+}
+function make_maze(w, h)
+  w = w or 5
+  h = h or 5
+  local map1 = initialize_grid(w*2+1, h*2+1)
+  function walk(x, y)
+    map1[y][x] = false
+    local d = { 1, 2, 3, 4 }
+    shuffle(d)
+    for i, dirnum in ipairs(d) do
+      local xx = x + dirs[dirnum].x
+      local yy = y + dirs[dirnum].y
+      if map1[yy] and map1[yy][xx] then
+        map1[avg(y, yy)][avg(x, xx)] = false
+        walk(xx, yy)
+      end
+    end
+  end
+  walk(math.random(1, w)*2, math.random(1, h)*2)
+  s = {}
+  for i = 1, h*2+1 do
+     for zz=1,3 do
+     for j = 1, w*2+1 do
+       for z=1,3 do
+           if map1[i][j] then
+             table.insert(s, '#')
+           else
+             table.insert(s, ' ')
+           end
+       end
+     end
+     table.insert(s, '\n')
+     end
+   end
+  startLuaCoroutine(self, "dothings")
+end
+
+function onScriptingButtonDown(ind,col)
+   if ind == 1 then
+      log(map)
+   end
+end
+
+function dothings()
+  zaxis,xaxis,monsters,alltiles,map,plrinfo = 0,0,{},{},{},{}
+  local xmap = {}
+  for i,v in pairs(s) do
+    if v == " " then
+      local newobj = spawnObject({type = "Tileset_Floor",position = {xaxis*floortile.getBounds().size.x-10,0.96,zaxis*floortile.getBounds().size.z-15},scale = {0,0,0}})
+      newobj.interactable = true
+      newobj.setLock(true)
+      table.insert(alltiles,newobj)
+      table.insert(xmap,{type="floor",obj=newobj,plr=false,monster={},plrinfo=plrinfo1,effect={}})
+      newobj.setColorTint({0.7,0.7,0.7})
+      --newobj.setTable("mapinfo", {y=#map+1,x=#xmap,type="floor"})
+      if #alltiles%tilesbeforemob == 0 then
+        local mobinfo = monstertypes[math.random(1,#monstertypes)]
+        local randcount = mobinfo.maxspawn[math.random(1,#mobinfo.maxspawn)]
+        if randcount ~= 0 then
+          local newmob = getObjectFromGUID(mobinfo.mainguid).clone({position = {xaxis*floortile.getBounds().size.x-10,1.46,zaxis*floortile.getBounds().size.z-15}})
+          newmob.setPosition({xaxis*floortile.getBounds().size.x-10,1.20,zaxis*floortile.getBounds().size.z-15})
+          newmob.setTable("stats", mobinfo)
+          newmob.setLock(true)
+          newmob.setScale({0,0,0})
+          xmap[#xmap].monster = {obj=newmob,info=mobinfo,index=#monsters+1}
+          table.insert(monsters,{obj=newmob,info=mobinfo,x=#xmap,y=#map+1,effect={}})
+          newmob.setName(mobinfo.name)
+          newmob.setDescription("Health: " .. mobinfo.health .. "\nAttack: " .. mobinfo.attackdamage .. "\nSpeed: " .. mobinfo.speed .. "\nGold:" .. mobinfo.gold[1] .. "-" .. mobinfo.gold[2] .. "\nSight" .. mobinfo.sight)
+        end
+      end
+      xaxis = xaxis + 1
+    elseif v == "#" then
+      local newobj = spawnObject({type = "Tileset_Floor",position = {xaxis*floortile.getBounds().size.x-10,0.96,zaxis*floortile.getBounds().size.z-15},scale = {0,0,0}})
+      newobj.interactable = true
+      newobj.setLock(true)
+      newobj.setDescription("Wall")
+      table.insert(xmap,{type="wall",obj=newobj})
+      --newobj.setTable("mapinfo", {y=#map+1,x=#xmap,type="wall"})
+      xaxis = xaxis + 1
+    elseif v == "\n" then
+      waitFrames(3)
+      table.insert(map,xmap)
+      xmap,xaxis = {},0
+      zaxis = zaxis + 1
+    end
+  end -- MAP CONSISTS OF Y AND X AXIS MAP[Y][X]
+  map[4][4].obj.setScale(floortile.getScale())
+  getObjectFromGUID("fd1853").call("updatefogofwar")
+  return 1
+end
+
+function addtileeffect(info)
+  local attack = info[1]
+  for i=1,attack.tileeffect.maxamount do
+    if i > #info[3] then
+      break
+    end
+    if info[3][i] == nil or map[info[3][i].y] == nil or map[info[3][i].y][info[3][i].x] == nil or map[info[3][i].y][info[3][i].x].effect.color ~= nil then
+    else
+    map[info[3][i].y][info[3][i].x].effect = attack.tileeffect --add reference here for exp to go to players/gold from tileeffects
+    table.insert(alleffecttiles,{x=info[3][i].x,y=info[3][i].y,color=attack.tileeffect.color})
+    if attack.tileeffect.color ~= "nocolor" then
+      map[info[3][i].y][info[3][i].x].obj.setColorTint(attack.tileeffect.color)
+    end
+    end
+  end
+end
+
+function playerattack(info)
+  local attack,critdmg = info[1],1
+  if attack.tileeffect.type ~= "none" then --set tile effects
+    addtileeffect({info[1],info[2],info[3]})
+  end
+  for i=1,attack.maxenemies do
+    if info[2][i] == nil or map[info[2][i].y] == nil or map[info[2][i].y][info[2][i].x] == nil or map[info[2][i].y][info[2][i].x].monster.obj == nil then
+    else
+      if math.random(1,100) <= attack.critchance then --calculate crit
+        critdmg = attack.critdamagemult
+      else
+        critdmg = 1
+      end
+      map[info[2][i].y][info[2][i].x].monster.info.health = map[info[2][i].y][info[2][i].x].monster.info.health - (attack.basestat*attack.damagep)*critdmg
+      monsters[map[info[2][i].y][info[2][i].x].monster.index].info.health = map[info[2][i].y][info[2][i].x].monster.info.health
+      --loadhp({map[info[2][i].y][info[2][i].x].monster,"update"})
+      checkdeath({monsters[map[info[2][i].y][info[2][i].x].monster.index],info[4]})
+    end
+  end
+end
+
+function loadhp(info)
+  local v = info[1]
+  local percent = (v.info.health/v.info.defaulthp)*100
+  local txt = ""
+ txt = (txt .. "╔══════════╗\n║")
+ for i=10,100,10 do
+     if percent >= i then
+         txt = (txt .. "█")
+     else
+         txt = (txt .. "░")
+     end
+ end
+ txt = (txt .. "║\n╚══════════╝\n")
+  if info[2] == "create" then
+    v.obj.createButton({
+      click_function = "none",
+      function_owner = self,
+      label          = txt,
+      position       = {0,5,0},
+      rotation       = {0,90,90},
+      width          = 1000,
+      height         = 500,
+      font_size      = 100,
+      color          = {1,1,1,1},
+    })
+  elseif info[2] == "update" then
+    --v.obj.removeButton(v.obj.getButtons()[1].index).
+    v.obj.editButton({
+      index = v.obj.getButtons()[1].index,
+      label          = txt,
+      color          = {1,1,1,1},
+    })
+  end
+end
+
+function onChat(msg,plr)
+  if msg == "!show" then
+    for i,v in pairs(alltiles) do
+      v.setScale(floortile.getScale())
+    end
+    for i,v in pairs(monsters) do
+      v.obj.setScale({1,1,1})
+    end
+  elseif msg == "!delete" then
+    for i,v in pairs(map) do
+      for ind,var in pairs(v) do
+        var.obj.destruct()
+        if var.monster ~= nil and var.monster.obj ~= nil then
+          var.monster.obj.destruct()
+        end
+      end
+    end
+  end
+end
+
+function waitFrames(frames)
+    while frames > 0 do
+    coroutine.yield(0)
+    frames = frames - 1
+    end
+end
+
+function checkspots(info) --obj,range
+  local pos,temptable,v,sightdist,currentmap = {},{},info[1],0,{} --m=multiple
+  for i=1,4 do
+    for m=1,info[2] do
+      if info[2]-m ~= 0 then --making sure will not do for i=1,0
+        sightdist = info[2]-m
+      elseif info[2]-m == 0 then
+        sightdist = 1
+      end
+      for ind=1,2 do
+        for z=1,sightdist do
+          if info[2]-m == 0 then
+            z = 0
+          end
+          if i == 1 then --checking +x
+            if ind == 1 then
+              if map[v.y+z] ~= nil and map[v.y+z][v.x+(1*m)] ~= nil then
+                pos = {y=v.y+z,x=v.x+(1*m)}
+                currentmap = map[v.y+z][v.x+(1*m)]
+              else
+                pos,currentmap = nil,nil
+              end
+            elseif ind == 2 then
+              if map[v.y-z] ~= nil and map[v.y-z][v.x+(1*m)] ~= nil then
+                pos = {y=v.y-z,x=v.x+(1*m)}
+                currentmap = map[v.y-z][v.x+(1*m)]
+              else
+                pos,currentmap = nil,nil
+              end
+            end
+          elseif i == 2 then --checking -x
+            if ind == 1 then
+              if map[v.y-z] ~= nil and map[v.y-z][v.x-(1*m)] ~= nil then
+                pos = {y=v.y-z,x=v.x-(1*m)}
+                currentmap = map[v.y-z][v.x-(1*m)]
+              else
+                pos,currentmap = nil,nil
+              end
+            elseif ind == 2 then
+              if map[v.y+z] ~= nil and map[v.y+z][v.x-(1*m)] ~= nil then
+                pos = {y=v.y+z,x=v.x-(1*m)}
+                currentmap = map[v.y+z][v.x-(1*m)]
+              else
+                pos,currentmap = nil,nil
+              end
+            end
+          elseif i == 3 then
+            if ind == 1 then
+              if map[(1*m)+v.y] ~= nil and map[(1*m)+v.y][v.x-z] ~= nil then
+                pos = {y=(1*m)+v.y,x=v.x-z}
+                currentmap = map[(1*m)+v.y][v.x-z]
+              else
+                pos,currentmap = nil,nil
+              end
+            elseif ind == 2 then
+              if map[(1*m)+v.y] ~= nil and map[(1*m)+v.y][v.x+z] ~= nil then
+                pos = {y=(1*m)+v.y,x=v.x+z}
+                currentmap = map[(1*m)+v.y][v.x+z]
+              else
+                pos,currentmap = nil,nil
+              end
+            end
+          elseif i == 4 then
+            if ind == 1 then
+              if map[v.y-(1*m)] ~= nil and map[v.y-(1*m)][v.x+z] ~= nil then
+                pos = {y=v.y-(1*m),x=v.x+z}
+                currentmap = map[v.y-(1*m)][v.x+z]
+              else
+                pos,currentmap = nil,nil
+              end
+            elseif ind == 2 then
+              if map[v.y-(1*m)] ~= nil and map[v.y-(1*m)][v.x-z] ~= nil then
+                pos = {y=v.y-(1*m),x=v.x-z}
+                currentmap = map[v.y-(1*m)][v.x-z]
+              else
+                pos,currentmap = nil,nil
+              end
+            end
+          end
+          if currentmap ~= nil and pos ~= nil and currentmap.type == "floor" then
+            table.insert(temptable,{y=pos.y,x=pos.x,map=currentmap})
+          elseif currentmap ~= nil and pos ~= nil and currentmap.type == "wall" then
+            break --if find wall then stop looking this direction
+          end
+        end
+      end
+      if i == 1 then
+        if map[v.y][v.x+(1*m)] ~= nil then
+          pos = {y=v.y,x=v.x+(1*m)}
+          currentmap = map[v.y][v.x+(1*m)]
+        else
+          pos,currentmap = nil,nil
+        end
+      elseif i == 2 then
+        if map[v.y][v.x-(1*m)] ~= nil then
+          pos = {y=v.y,x=v.x-(1*m)}
+          currentmap = map[v.y][v.x-(1*m)]
+        else
+          pos,currentmap = nil,nil
+        end
+      elseif i == 3 then
+        if map[(1*m)+v.y] ~= nil then
+          pos = {y=(1*m)+v.y,x=v.x}
+          currentmap = map[(1*m)+v.y][v.x]
+        else
+          pos,currentmap = nil,nil
+        end
+      elseif i == 4 then
+        if map[v.y-(1*m)] ~= nil then
+          pos = {y=v.y-(1*m),x=v.x}
+          currentmap = map[v.y-(1*m)][v.x]
+        else
+          pos,currentmap = nil,nil
+        end
+      end
+      if currentmap ~= nil and pos ~= nil and currentmap.type == "floor" then
+        table.insert(temptable,{y=pos.y,x=pos.x,map=currentmap})
+      elseif currentmap ~= nil and pos ~= nil and currentmap.type == "wall" then
+        break --if find wall then stop looking this direction
+      end
+    end
+  end
+  return temptable
+end
+
+function checkattackspots(info)
+  local v,currentmap,pos,temptable = info[1],{},{},{}
+  for i=1,4 do --all directions
+    for ind=1,3 do --all spaces
+      for m=1,info[2] do --range outwards
+        if m > 1 then
+          m = m+(m-1)
+        end
+        for ind1=1,#v.info.attackshape do
+        if #v.info.attackshape*m > info[2] then
+          break
+        end
+        if i == 1 then
+          if ind == 1 then ----------1
+            if map[v.y-1] ~= nil and map[v.y-1][v.x+(ind1+m)-1] ~= nil then
+              pos = {y=v.y-1,x=v.x+(ind1+m)-1}
+              currentmap = map[v.y-1][v.x+(ind1+m)-1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 2 then
+            if map[v.y][v.x+(ind1+m)-1] ~= nil then
+              pos = {y=v.y,x=v.x+(ind1+m)-1}
+              currentmap = map[v.y][v.x+(ind1+m)-1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 3 then
+            if map[v.y+1] ~= nil and map[v.y+1][v.x+(ind1+m)-1] ~= nil then
+              pos = {y=v.y+1,x=v.x+(ind1+m)-1}
+              currentmap = map[v.y+1][v.x+(ind1+m)-1]
+            else
+              pos,currentmap = nil,nil
+            end
+          end
+        elseif i == 2 then -------------2
+          if ind == 1 then
+            if map[v.y+1] ~= nil and map[v.y+1][v.x-(ind1+m)+1] ~= nil then
+              pos = {y=v.y+1,x=v.x-(ind1+m)+1}
+              currentmap = map[v.y+1][v.x-(ind1+m)+1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 2 then
+            if map[v.y][v.x-(ind1+m)+1] ~= nil then
+              pos = {y=v.y,x=v.x-(ind1+m)+1}
+              currentmap = map[v.y][v.x-(ind1+m)+1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 3 then
+            if map[v.y-1] ~= nil and map[v.y-1][v.x-(ind1+m)+1] ~= nil then
+              pos = {y=v.y-1,x=v.x-(ind1+m)+1}
+              currentmap = map[v.y-1][v.x-(ind1+m)+1]
+            else
+              pos,currentmap = nil,nil
+            end
+          end
+        elseif i == 3 then ----------3
+          if ind == 1 then
+            if map[(ind1+m)-1+v.y] ~= nil and map[(ind1+m)-1+v.y][v.x+1] ~= nil then
+              pos = {y=(ind1+m)-1+v.y,x=v.x+1}
+              currentmap = map[(ind1+m)-1+v.y][v.x+1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 2 then
+            if map[(ind1+m)-1+v.y] ~= nil then
+              pos = {y=(ind1+m)-1+v.y,x=v.x}
+              currentmap = map[(ind1+m)-1+v.y][v.x]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 3 then
+            if map[(ind1+m)-1+v.y] ~= nil and map[(ind1+m)-1+v.y][v.x-1] ~= nil then
+              pos = {y=(ind1+m)-1+v.y,x=v.x-1}
+              currentmap = map[(ind1+m)-1+v.y][v.x-1]
+            else
+              pos,currentmap = nil,nil
+            end
+          end
+        elseif i == 4 then -------------4
+          if ind == 1 then
+            if map[v.y-(ind1+m)+1] ~= nil and map[v.y-(ind1+m)+1][v.x+1] ~= nil then
+              pos = {y=v.y-(ind1+m)+1,x=v.x+1}
+              currentmap = map[v.y-(ind1+m)+1][v.x+1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 2 then
+            if map[v.y-(ind1+m)+1] ~= nil then
+              pos = {y=v.y-(ind1+m)+1,x=v.x}
+              currentmap = map[v.y-(ind1+m)+1][v.x]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 3 then
+            if map[v.y-(ind1+m)+1] ~= nil and map[v.y-(ind1+m)+1][v.x-1] ~= nil  then
+              pos = {y=v.y-(ind1+m)+1,x=v.x-1}
+              currentmap = map[v.y-(ind1+m)+1][v.x-1]
+            else
+              pos,currentmap = nil,nil
+            end
+          end
+        end
+        if currentmap ~= nil and pos ~= nil and currentmap.type == "floor" then
+          if v.info.attackshape[ind1][ind].type == "attack" then
+            table.insert(temptable,{y=pos.y,x=pos.x,map=currentmap})
+            --currentmap.obj.highlightOn({0.8,0.2,0.2}, 5)
+          end
+        elseif currentmap ~= nil and pos ~= nil and currentmap.type == "wall" then
+          break --if find wall then stop looking this direction
+        end
+      end
+      end
+    end
+  end
+  return temptable
+end
+
+function checkattack(info)
+  local v,monsterattackplayers,distances,attacktf,tilepriority = info[1],{},{},false,{}
+  local openspots = checkattackspots({v,v.info.attackrange})
+  for ind,var in pairs(openspots) do
+    if v.info.tileeffect.type ~= "none" then
+      table.insert(tilepriority,{(var.y - v.y)+(var.x - v.x),y=var.y,x=var.x})
+    end
+    if var.map.plr == true then
+      table.insert(monsterattackplayers,{y=var.y,x=var.x})
+    end
+  end
+  if #monsterattackplayers > 0 then--cleanup
+    for ind1,var1 in pairs(monsterattackplayers) do
+      table.insert(distances,{(var1.y - v.y)+(var1.x - v.x),y=var1.y,x=var1.x})
+    end
+    if v.info.tileeffect.type ~= "none" then
+      if v.info.tileeffect.priority == "close" then
+        --table.sort(tilepriority, function(a, b) return a[1] < b[1] end)
+      elseif v.info.tileeffect.priority == "far" then
+        --table.sort(tilepriority, function(a, b) return a[1] > b[1] end)
+      elseif v.info.tileeffect.priority == "random" then
+        --make random
+      end
+    end
+    if v.info.targetingpriority == "close" then
+      table.sort(distances, function(a, b) return a[1] > b[1] end)
+    elseif v.info.targetingpriority == "far" then
+      table.sort(distances, function(a, b) return a[1] < b[1] end)
+    elseif v.info.targetingpriority == "random" then
+      --make random
+    end
+    addtileeffect({v.info,"",tilepriority})
+    --for i=1,v.info.attacksperturn do
+      --currentmonster,currentattackmapinfo = v,map[distances[1].y][distances[1].x]
+      attacktf = true
+      map[distances[1].y][distances[1].x].plrinfo.plate.call("takedamage", {v})
+      --startLuaCoroutine(self,"attackanimation")
+    --end
+  end
+  return attacktf
+end
+
+function attackanimation()
+  local oldpos,attackpos = currentmonster.obj.getPosition(),currentattackmapinfo.plrinfo.obj.getPosition()
+  if currentmonster.info.attackanimation == "melee" then
+    currentmonster.obj.setPositionSmooth(attackpos,false,false)
+    waitFrames(5)
+    currentmonster.obj.setPositionSmooth(oldpos,false,false)
+  end
+return 1
+end
+
+function checktileeffects()
+  local test = {}
+  for i,v in pairs(alleffecttiles) do --problem with addtileeffect in checkattack
+    if map[v.y][v.x].effect ~= nil and map[v.y][v.x].effect.lasts ~= nil and map[v.y][v.x].effect.lasts > 0 then
+      map[v.y][v.x].effect.lasts = map[v.y][v.x].effect.lasts - 1
+    elseif map[v.y][v.x].effect ~= nil and map[v.y][v.x].effect.lasts ~= nil and map[v.y][v.x].effect.lasts <= 0 then
+      map[v.y][v.x].effect = {}
+      --table.remove(map[v.y][v.x],6)
+      alleffecttiles[i] = nil
+      --table.insert(test,i)
+      --table.remove(alleffecttiles,i)
+    end
+  end
+  --[[
+  if #test > 0 then
+    for i,v in pairs(test) do
+      table.remove(alleffecttiles,v-(i-1)) --index does not exsist
+    end
+  end]]
+  getObjectFromGUID("fd1853").call("updatefogofwar")
+end
+
+function checkdeath(info)
+  if map[info[1].y][info[1].x].monster.obj ~= nil and map[info[1].y][info[1].x].monster.obj.getScale()[1] ~= 0 then
+    loadhp({map[info[1].y][info[1].x].monster,"update"})
+  end
+  if map[info[1].y][info[1].x].monster.obj ~= nil and map[info[1].y][info[1].x].monster.info.health <= 0 then
+    if map[info[1].y][info[1].x].effect ~= nil and map[info[1].y][info[1].x].effect.abilityowner ~= nil then
+      map[info[1].y][info[1].x].effect.abilityowner.call("enemykilled",{map[info[1].y][info[1].x]})
+    elseif info[2] ~= nil then
+      info[2].plate.call("enemykilled",{map[info[1].y][info[1].x]})
+    end
+    map[info[1].y][info[1].x].monster.obj.destruct()
+    monsters[map[info[1].y][info[1].x].monster.index] = {}
+    map[info[1].y][info[1].x].monster = {}
+    --startLuaCoroutine(self, "deathanimation")
+  end
+end
+
+function none() end
+
+function calculateeffects(info)
+  local i,returninfo = info[2],{}
+  local v = info[1]
+  if map[v.y][v.x].effect.type ~= nil then
+    table.insert(monsters[i].effect,map[v.y][v.x].effect)
+  end
+  for ind,v in pairs(monsters[i].effect) do --parse through all effects on enemy
+    if v ~= nil then
+      if v.type == "fire" and v.wearoff > 0 then
+        map[info[1].y][info[1].x].monster.info.health = map[info[1].y][info[1].x].monster.info.health - (v.basestat*v.dmgpercent)
+        monsters[i].info.health = map[info[1].y][info[1].x].monster.info.health
+        monsters[i].effect[ind].wearoff = monsters[i].effect[ind].wearoff - 1
+      elseif v.type == "fire" and v.wearoff <= 0 then
+        monsters[i].effect[ind] = nil
+      end
+      if v.type == "slow" and v.wearoff > 0 then
+        map[info[1].y][info[1].x].monster.info.speed = map[info[1].y][info[1].x].monster.info.speed - (v.basestat*v.dmgpercent)
+        monsters[i].info.speed = map[v.y][v.x].monster.info.speed
+        monsters[i].effect[ind].wearoff = monsters[i].effect[ind].wearoff - 1
+      elseif v.type == "slow" and v.wearoff <= 0 then
+        monsters[i].effect[ind] = nil
+      end
+      if v.type == "taunt" and v.wearoff > 0 then
+        local plrinfo = monsters[i].effect[ind].abilityowner.getTable("plrinfo")
+        table.insert(returninfo,{"closplr",y=plrinfo.y,x=plrinfo.x})
+        monsters[i].effect[ind].wearoff = monsters[i].effect[ind].wearoff - 1
+      elseif v.type == "taunt" and v.wearoff <= 0 then
+        monsters[i].effect[ind] = nil
+      end
+      if v.type == "stun" and v.wearoff > 0 then
+        if map[info[1].y][info[1].x].effect.lasts ~= nil and map[info[1].y][info[1].x].effect.lasts > 0 then
+          map[info[1].y][info[1].x].monster.info.health = map[info[1].y][info[1].x].monster.info.health - (v.basestat*v.dmgpercent)
+          monsters[i].info.health = map[info[1].y][info[1].x].monster.info.health
+        end
+        table.insert(returninfo,{"stun"})
+        monsters[i].effect[ind].wearoff = monsters[i].effect[ind].wearoff - 1
+      elseif v.type == "stun" and v.wearoff <= 0 then
+        monsters[i].effect[ind] = nil
+      end
+    end
+  end
+  if v.obj.getScale()[1] ~= 0 then
+    loadhp({info[1],"update"})
+  end
+  checkdeath({info[1]})
+  return returninfo
+end
+
+function monsterturn()
+  for i,v in pairs(monsters) do
+    if v.info == nil then
+    else
+      local info5 = calculateeffects({v,i})
+      for ind5,var5 in pairs(info5) do
+        if var5[1] == "stun" and map[v.y][v.x].monster.obj ~= nil then
+          map[v.y][v.x].monster.info.activated = false
+          monsters[i].info.activated = false
+        end
+      end
+      if v.info.activated == false and map[v.y][v.x].monster.info.activated == true then --comparing with map table in order to not parse through whole monster table
+        monsters[i].info.activated = true
+      end
+      if v.obj ~= nil and v.info.activated == true and checkattack({v}) == false and v.info.speed > 0 then
+        for ind=1,v.info.speed do --move according to speed trait
+          if closestplayer == nil then
+            local closestplayer = {}
+          end
+          local monstervisibleplayers,closestplayer,openspots,ycord,xcord = {},{},checkspots({v,v.info.sight}),0,0
+          for ind5,var5 in pairs(info5) do
+            if var5[1] == "closplr" then
+              closestplayer = {y=var5.y,x=var5.x}
+              table.insert(monstervisibleplayers,{"variable"})
+            end
+          end
+          if monstervisibleplayers[1] == nil then --checking for taunt skill
+            for ind,var in pairs(openspots) do
+              if var.map.plr == true then
+                table.insert(monstervisibleplayers,{y=var.y,x=var.x})
+              end
+            end
+          end
+          if #monstervisibleplayers > 0 then --see players to attack
+            if closestplayer.y == nil then --check for taunt effect, has to be here, no idea why
+              local min = (monstervisibleplayers[1].y - v.y)+(monstervisibleplayers[1].x - v.x)
+              for ind1,var1 in pairs(monstervisibleplayers) do
+                if (var1.y - v.y)+(var1.x - v.x) <= min then
+                  min,closestplayer = (var1.y - v.y)+(var1.x - v.x),{y=var1.y,x=var1.x}
+                end
+              end
+            end
+              if closestplayer.y-v.y == 0 then
+                ycord = v.y
+              elseif closestplayer.y-v.y ~= 0 then
+                ycord = (closestplayer.y-v.y)/math.abs(closestplayer.y-v.y)+v.y
+              end
+              if closestplayer.x-v.x == 0 then
+                xcord = v.x
+              elseif closestplayer.x-v.x ~= 0 then
+                xcord = ((closestplayer.x-v.x)/math.abs(closestplayer.x-v.x))+v.x
+              end
+              if map[ycord][xcord].plr == false and map[ycord][xcord].monster.obj == nil then --player and mob collision
+                --map[v.y][v.x].monster = {}
+                v.obj.setPositionSmooth(map[ycord][xcord].obj.getPosition(),false,false)
+                map[ycord][xcord].monster.obj,map[ycord][xcord].monster.info,map[ycord][xcord].monster.index = map[v.y][v.x].monster.obj,map[v.y][v.x].monster.info,map[v.y][v.x].monster.index --update global map with mobinfo
+                map[v.y][v.x].monster = {}
+                monsters[i].x,monsters[i].y = xcord,ycord --update mobtable with new positions
+              elseif map[ycord][xcord].plr == false and map[ycord][xcord].monster.obj ~= nil then
+                --if monster is in the way
+              end
+          elseif #monstervisibleplayers == 0 and v.info.chancetowander ~= 0 and math.random(1,v.info.chancetowander) == 1 then--wander
+            local openspots1 = checkspots({v,1})
+            local random = math.random(1,#openspots1)
+            local ranx,rany = openspots1[random].x,openspots1[random].y
+            --map[v.y][v.x].monster = {} --set old mobtable to empty
+            v.obj.setPositionSmooth(map[rany][ranx].obj.getPosition(),false,false)
+            map[rany][ranx].monster.obj,map[rany][ranx].monster.info,map[rany][ranx].monster.index = map[v.y][v.x].monster.obj,map[v.y][v.x].monster.info,map[rany][ranx].monster.index --update global map with mobinfo
+            map[v.y][v.x].monster = {}
+            monsters[i].x,monsters[i].y = ranx,rany --update mobtable with new positions
+          end
+          end
+        end
+      end
+  end
+checktileeffects()
+end

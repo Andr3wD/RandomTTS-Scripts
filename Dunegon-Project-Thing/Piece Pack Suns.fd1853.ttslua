@@ -1,0 +1,671 @@
+function onload()
+  self.createButton({position={0,0.1,-1.2},height=200,width=200,label="^",click_function="up",function_owner=self})
+  self.createButton({position={0,0.1,-0.8},height=200,width=200,label="",click_function="down",function_owner=self})
+  self.createButton({position={0.4,0.1,-0.8},height=200,width=200,label=">",click_function="right",function_owner=self})
+  self.createButton({position={-0.4,0.1,-0.8},height=200,width=200,label="<",click_function="left",function_owner=self})
+  clicksr,clicksu,clicksl,clicksd = 0,0,0,0
+  ownercol = "White"
+  movement = 0
+  visibletiles = {}
+  ability1cd,ability2cd,ability3cd,ability4cd = 100,100,100,100
+  floortile = getObjectFromGUID("3b92a2")
+  plrinfo = {y=4,x=4,obj=getObjectFromGUID("cf3a9e"),stats={defaulthp=10,gold=0,exp=0,health=10,speed=1,sight=5,level=1,defense=0,luck=5,knowledge=5,agility=5,strength=5},effect={},plate=self}
+  setupabilities()
+  self.createButton({position={0,0.1,0},height=200,width=200,label="X",click_function="cancel",function_owner=self})
+  self.createButton({position={0,0.1,0.4},height=200,width=200,label=abilities[1].name,click_function="defaultability",function_owner=self})
+  self.createButton({position={-0.8,0.1,0.8},height=200,width=200,label=abilities[2].name,click_function="ability1",function_owner=self})
+  self.createButton({position={-0.4,0.1,0.8},height=200,width=200,label=abilities[3].name,click_function="ability2",function_owner=self})
+  self.createButton({position={0,0.1,0.8},height=200,width=200,label=abilities[4].name,click_function="ability3",function_owner=self})
+  self.createButton({position={0.4,0.1,0.8},height=200,width=200,label=abilities[5].name,click_function="ability4",function_owner=self})
+  --Global.setTable("plrinfo1", plrinfo)
+  loadplrhp({"create"})
+end
+
+function enemykilled(info) --called from global in checkdeath()
+  local goldgain,expgain = math.random(info[1].monster.info.gold[1],info[1].monster.info.gold[2]),math.random(info[1].monster.info.exp[1],info[1].monster.info.exp[2])
+  plrinfo.stats.exp = plrinfo.stats.exp + expgain --add exp
+  plrinfo.stats.gold = plrinfo.stats.gold + goldgain --add gold
+  printToColor("You killed:" .. info[1].monster.info.name .. "\nand gained:\n" .. goldgain .. " gold\n" .. expgain .. " experience", ownercol, {1,1,1})
+end
+
+function cancel()--fix
+  usingattack = nil
+end
+
+function setupabilities()
+  --armor is a % in decimal form
+  --attackrange=pattern repeat amount
+  --all chances are % in decimal form, aoerange=0 means no aoe,cooldown=turns(both players and enemies) before recharging
+  abilities = {{name="Swing",abilityowner=self,attackrange=1,attackanimation="melee",targetingpriority="close",attackshape={{"norm",{"attack","attack","attack"}},{"left",{"nothing","attack","nothing"}}},
+  damagep=1,basestat=plrinfo.stats.strength,critdamagemult=0,critchance=0,aoerange=0,cooldown=1,tileeffect={lasts=5,color={1,0.5,0},type="none",wearoff=1,maxamount=10,basestat=plrinfo.stats.knowledge,dmgpercent=0.5,priority="close",abilityowner=self},maxenemies=5},
+  {name="Spin",abilityowner=self,attackrange=1,attackanimation="melee",targetingpriority="close",attackshape={{"norm",{"attack","attack","attack"}},{"right",{"nothing","attack","nothing"}},{"left",{"nothing","attack","nothing"}},{"down",{"attack","attack","attack"}}},
+  damagep=2,basestat=plrinfo.stats.strength,critdamagemult=0,critchance=0,aoerange=0,cooldown=1,tileeffect={lasts=5,color={1,0.5,0},type="none",wearoff=1,maxamount=10,basestat=plrinfo.stats.knowledge,dmgpercent=0.5,priority="close",abilityowner=self},maxenemies=9},
+  {name="Taunt",attackrange=3,attackanimation="melee",targetingpriority="close",attackshape={{"norm",{"attack","attack","attack"},{"attack","attack","attack"}}},
+  damagep=0,basestat=plrinfo.stats.strength,critdamagemult=0,critchance=0,aoerange=0,cooldown=3,tileeffect={color="nocolor",lasts=1,type="taunt",wearoff=5,maxamount=15,basestat=plrinfo.stats.knowledge,dmgpercent=0,priority="close",abilityowner=self},maxenemies=1},
+  {name="Block",abilityowner=self,attackrange=1,attackanimation="melee",targetingpriority="close",attackshape={{"norm",{"attack","attack","attack"}},{"left",{"nothing","attack","nothing"}}},
+  damagep=0,basestat=plrinfo.stats.knowledge,critdamagemult=0,critchance=0,aoerange=0,cooldown=3,tileeffect={lasts=5,color={1,0.5,0},type="fire",wearoff=1,maxamount=10,basestat=plrinfo.stats.knowledge,dmgpercent=0.5,priority="close",abilityowner=self},maxenemies=5},
+  {name="Stomp",abilityowner=self,attackrange=4,attackanimation="melee",targetingpriority="close",attackshape={{"norm",{"nothing","attack","nothing"},{"nothing","attack","nothing"}}},
+  damagep=1.5,basestat=plrinfo.stats.knowledge,critdamagemult=0,critchance=0,aoerange=0,cooldown=3,tileeffect={lasts=1,color={1,0.5,0},type="stun",wearoff=4,maxamount=10,basestat=plrinfo.stats.knowledge,dmgpercent=0.8,priority="close",abilityowner=self},maxenemies=1}}
+end
+
+function defaultability()
+  setupabilities()
+  usingattack = abilities[1]
+  usingattack.x = plrinfo.x
+  usingattack.y = plrinfo.y
+end
+
+function ability1()
+  if abilities[1].cooldown <= ability1cd then
+  setupabilities()
+  ability1cd = 0
+  usingattack = abilities[2]
+  usingattack.x = plrinfo.x
+  usingattack.y = plrinfo.y
+  end
+end
+
+function ability2()
+  if abilities[2].cooldown <= ability2cd then
+    setupabilities()
+    ability2cd = 0
+    usingattack = abilities[3]
+    usingattack.x = plrinfo.x
+    usingattack.y = plrinfo.y
+  end
+end
+
+function ability3()
+  if abilities[3].cooldown <= ability3cd then
+    setupabilities()
+    ability3cd = 0
+    usingattack = abilities[4]
+    usingattack.x = plrinfo.x
+    usingattack.y = plrinfo.y
+  end
+end
+
+function ability4()
+  if abilities[4].cooldown <= ability4cd then
+    setupabilities()
+    ability4cd = 0
+    usingattack = abilities[5]
+    usingattack.x = plrinfo.x
+    usingattack.y = plrinfo.y
+  end
+end
+
+function attackanimation()
+
+return 1
+end
+
+function calculatecd()
+  ability1cd = ability1cd + 1
+  ability2cd = ability2cd + 1
+  ability3cd = ability3cd + 1
+  ability4cd = ability4cd + 1
+end
+
+function checkattack(info)
+  local v,playerattackmonsters,distances,attacktf,tblsize,tilepriority = info[1],{},{},false,0,{}
+  local openspots = checkattackspots({v,v.attackrange,info[2]})
+  for ind,var in pairs(openspots) do
+    if v.tileeffect.type ~= "none" then
+      table.insert(tilepriority,{(var.y - v.y)+(var.x - v.x),y=var.y,x=var.x})
+    end
+    if var.map.monster.obj ~= nil then
+      table.insert(playerattackmonsters,{y=var.y,x=var.x})
+    end
+  end
+  if #playerattackmonsters > 0 and justcheck == false then
+    for ind1,var1 in pairs(playerattackmonsters) do
+      table.insert(distances,{(var1.y - v.y)+(var1.x - v.x),y=var1.y,x=var1.x})
+    end
+    if v.tileeffect.type ~= "none" then
+      if v.tileeffect.priority == "close" then
+        --table.sort(tilepriority, function(a, b) return a[1] < b[1] end)
+      elseif v.tileeffect.priority == "far" then
+        --table.sort(tilepriority, function(a, b) return a[1] > b[1] end)
+      elseif v.tileeffect.priority == "random" then
+        --make random
+      end
+    end
+    if v.targetingpriority == "close" then
+      table.sort(distances, function(a, b) return a[1] < b[1] end)
+    elseif v.targetingpriority == "far" then
+      table.sort(distances, function(a, b) return a[1] > b[1] end)
+    elseif v.targetingpriority == "random" then
+      --make random
+    end
+    calculatecd()
+    Global.call("playerattack", {usingattack,distances,tilepriority,plrinfo})
+    checkactions()
+    --startLuaCoroutine(self,"attackanimation")
+    usingattack = nil
+    clicksr,clicksu,clicksl,clicksd = 0,0,0,0
+  end
+end
+
+function calculateclicks(info)
+  if info[1] == "down" then
+    clicksd = clicksd + 1
+    clicksr,clicksu,clicksl = 0,0,0
+    if clicksd > 1 then
+      justcheck = false
+    else
+      justcheck = true
+    end
+  elseif info[1] == "right" then
+    clicksd,clicksu,clicksl = 0,0,0
+    clicksr = clicksr + 1
+    if clicksr > 1 then
+      justcheck = false
+    else
+      justcheck = true
+    end
+  elseif info[1] == "left" then
+    clicksr,clicksu,clicksd = 0,0,0
+    clicksl = clicksl + 1
+    if clicksl > 1 then
+      justcheck = false
+    else
+      justcheck = true
+    end
+  elseif info[1] == "up" then
+    clicksr,clicksd,clicksl = 0,0,0
+    clicksu = clicksu + 1
+    if clicksu > 1 then
+      justcheck = false
+    else
+      justcheck = true
+    end
+  end
+end
+
+function up(obj,col)--1> 2< 3^ 4D
+  if usingattack == nil then
+    move({1,0})
+  elseif usingattack ~= nil then
+    calculateclicks({"up"})
+    checkattack({usingattack,1})
+  end
+end
+
+function down(obj,col)
+  if usingattack == nil then
+    move({-1,0})
+  elseif usingattack ~= nil then
+    calculateclicks({"down"})
+    checkattack({usingattack,3})
+  end
+end
+
+function right(obj,col)
+  if usingattack == nil then
+    move({0,1})
+  elseif usingattack ~= nil then
+    calculateclicks({"right"})
+    checkattack({usingattack,2})
+  end
+end
+
+function left(obj,col)
+  if usingattack == nil then
+    move({0,-1})
+  elseif usingattack ~= nil then
+    calculateclicks({"left"})
+    checkattack({usingattack,4})
+  end
+end
+
+function checkspot(dir)
+    map = Global.getTable("map")
+   local currentmap = {}
+if dir[1] == -1 then
+  currentmap = map[plrinfo.y-1][plrinfo.x]
+elseif dir[1] == 1 then
+  currentmap = map[plrinfo.y+1][plrinfo.x]
+elseif dir[2] == 1 then
+  currentmap = map[plrinfo.y][plrinfo.x+1]
+elseif dir[2] == -1 then
+  currentmap = map[plrinfo.y][plrinfo.x-1]
+end
+return currentmap
+end
+
+function checkactions()
+  movement = movement + 1
+  if movement >= plrinfo.stats.speed then
+    Global.call("monsterturn")
+    movement = 0
+  end
+end
+
+function checktileeffects()
+  if map[plrinfo.y][plrinfo.x].effect.type ~= nil and map[plrinfo.y][plrinfo.x].effect.type ~= "none" then
+    table.insert(plrinfo.effect,map[plrinfo.y][plrinfo.x].effect)
+  end
+  for i,v in pairs(plrinfo.effect) do
+    if v.type == "fire" and v.wearoff > 0 then
+      plrinfo.stats.health = plrinfo.stats.health - v.basestat
+      plrinfo.effect[i].wearoff = plrinfo.effect[i].wearoff - 1
+      if v.wearoff <= 0 then
+        plrinfo.effect[i] = nil
+      end
+    elseif v.type == "slow" then
+
+    end
+  end
+  loadplrhp({"update"})
+end
+
+function move(dir)
+local currentmap = checkspot(dir)
+  if currentmap.type == "floor" and currentmap.monster.obj == nil then
+    checktileeffects()
+    map[plrinfo.y][plrinfo.x].plr = false
+    map[plrinfo.y][plrinfo.x].plrinfo = {}
+    if dir[1] == -1 then
+      plrinfo.y = plrinfo.y-1
+    elseif dir[1] == 1 then
+      plrinfo.y = plrinfo.y+1
+    elseif dir[2] == 1 then
+      plrinfo.x = plrinfo.x+1
+    elseif dir[2] == -1 then
+      plrinfo.x = plrinfo.x-1
+    end
+    calculatecd()
+    map[plrinfo.y][plrinfo.x].plr = true
+    map[plrinfo.y][plrinfo.x].plrinfo = plrinfo
+    Global.setTable("map", map)
+    plrinfo.obj.setPosition(currentmap.obj.getPosition())
+    checkactions()
+    updatefogofwar()
+  end
+end
+
+function loadplrhp(info)
+  local percent = (plrinfo.stats.health/plrinfo.stats.defaulthp)*100
+  local txt = ""
+ txt = (txt .. "╔══════════╗\n║")
+ for i=10,100,10 do
+     if percent >= i then
+         txt = (txt .. "█")
+     else
+         txt = (txt .. "░")
+     end
+ end
+ txt = (txt .. "║\n╚══════════╝\n")
+  if info[1] == "create" then
+    plrinfo.plate.createButton({
+      click_function = "none",
+      function_owner = self,
+      label          = txt,
+      position       = {0,5,0},
+      rotation       = {0,90,90},
+      width          = 1000,
+      height         = 500,
+      font_size      = 100,
+      color          = {1,1,1,1},
+    })
+  elseif info[1] == "update" then
+    plrinfo.plate.editButton({
+      index = 10,
+      label          = txt,
+      color          = {1,1,1,1},
+    })
+  end
+end
+
+function loadhp(info)
+  local v = info[1]
+  local percent = (v.info.health/v.info.defaulthp)*100
+  local txt = ""
+ txt = (txt .. "╔══════════╗\n║")
+ for i=10,100,10 do
+     if percent >= i then
+         txt = (txt .. "█")
+     else
+         txt = (txt .. "░")
+     end
+ end
+ txt = (txt .. "║\n╚══════════╝\n")
+  if info[2] == "create" then
+    v.obj.createButton({
+      click_function = "none",
+      function_owner = self,
+      label          = txt,
+      position       = {0,5,0},
+      rotation       = {0,90,90},
+      width          = 1000,
+      height         = 500,
+      font_size      = 100,
+      color          = {1,1,1,1},
+    })
+  end
+end
+
+function updatefogofwar()
+  local alleffecttiles = Global.getVar("alleffecttiles")
+  map = Global.getTable("map")
+    for ind,var in pairs(visibletiles) do
+        var.map.obj.setColorTint({0.3,0.3,0.3})
+      if var.map.monster.obj ~= nil and var.map.monster.obj.getScale()[1] ~= 0 then
+        var.map.monster.obj.setScale({0,0,0})
+        for ind1=1,#var.map.monster.obj.getButtons() do
+          var.map.monster.obj.removeButton(var.map.monster.obj.getButtons()[ind1].index)
+        end
+      end
+    end
+    map[plrinfo.y][plrinfo.x].obj.setColorTint({0.7,0.7,0.7})
+    if map[plrinfo.y][plrinfo.x].monster.obj ~= nil and map[plrinfo.y][plrinfo.x].monster.obj.getScale()[1] == 0 then
+      map[plrinfo.y][plrinfo.x].monster.obj.setScale({1,1,1})
+    end
+    visibletiles = {}
+    for i,v in pairs(checkspots({plrinfo,plrinfo.stats.sight})) do
+        v.map.obj.setColorTint({0.7,0.7,0.7})
+      if v.map.monster.obj ~= nil and v.map.monster.obj.getScale()[1] == 0 then
+        v.map.monster.obj.setScale({1,1,1})
+        loadhp({v.map.monster,"create"})
+      elseif v.map.monster.obj ~= nil and v.map.monster.info ~= nil and v.map.monster.info.activated == false then
+        v.map.monster.info.activated = true
+        Global.setTable("map", map)
+      end
+      if v.map.obj.getScale()[1] == 0 then
+        v.map.obj.setScale(floortile.getScale())
+      end
+      table.insert(visibletiles,v)
+    end
+    for i,v in pairs(alleffecttiles) do
+      if v.color ~= "nocolor" then
+        map[v.y][v.x].obj.setColorTint(v.color)
+      end
+    end
+end
+
+function onPickUp(col)
+  ownercol = col
+end
+
+function none() end
+
+function takedamage(info)
+  map = Global.getTable("map")
+  checktileeffects()
+  local attack,currentmonster,alleffecttiles = info[1].info,info[1],{}
+  plrinfo.stats.health = plrinfo.stats.health - (currentmonster.info.attackdamage - currentmonster.info.attackdamage*plrinfo.stats.defense)
+  map[plrinfo.y][plrinfo.x].plrinfo = plrinfo
+  Global.setTable("map", map)
+  loadplrhp({"update"})
+end
+
+function checkspots(info) --obj,range
+  map = Global.getTable("map")
+  local pos,temptable,v,sightdist,currentmap = {},{},info[1],0,{} --m=multiple
+  for i=1,4 do
+    for m=1,info[2] do
+      if info[2]-m ~= 0 then --making sure will not do for i=1,0
+        sightdist = info[2]-m
+      elseif info[2]-m == 0 then
+        sightdist = 1
+      end
+      for ind=1,2 do
+        for z=1,sightdist do
+          if info[2]-m == 0 then
+            z = 0
+          end
+          if i == 1 then --checking +x
+            if ind == 1 then
+              if map[v.y+z] ~= nil and map[v.y+z][v.x+(1*m)] ~= nil then
+                pos = {y=v.y+z,x=v.x+(1*m)}
+                currentmap = map[v.y+z][v.x+(1*m)]
+              else
+                pos,currentmap = nil,nil
+              end
+            elseif ind == 2 then
+              if map[v.y-z] ~= nil and map[v.y-z][v.x+(1*m)] ~= nil then
+                pos = {y=v.y-z,x=v.x+(1*m)}
+                currentmap = map[v.y-z][v.x+(1*m)]
+              else
+                pos,currentmap = nil,nil
+              end
+            end
+          elseif i == 2 then --checking -x
+            if ind == 1 then
+              if map[v.y-z] ~= nil and map[v.y-z][v.x-(1*m)] ~= nil then
+                pos = {y=v.y-z,x=v.x-(1*m)}
+                currentmap = map[v.y-z][v.x-(1*m)]
+              else
+                pos,currentmap = nil,nil
+              end
+            elseif ind == 2 then
+              if map[v.y+z] ~= nil and map[v.y+z][v.x-(1*m)] ~= nil then
+                pos = {y=v.y+z,x=v.x-(1*m)}
+                currentmap = map[v.y+z][v.x-(1*m)]
+              else
+                pos,currentmap = nil,nil
+              end
+            end
+          elseif i == 3 then
+            if ind == 1 then
+              if map[(1*m)+v.y] ~= nil and map[(1*m)+v.y][v.x-z] ~= nil then
+                pos = {y=(1*m)+v.y,x=v.x-z}
+                currentmap = map[(1*m)+v.y][v.x-z]
+              else
+                pos,currentmap = nil,nil
+              end
+            elseif ind == 2 then
+              if map[(1*m)+v.y] ~= nil and map[(1*m)+v.y][v.x+z] ~= nil then
+                pos = {y=(1*m)+v.y,x=v.x+z}
+                currentmap = map[(1*m)+v.y][v.x+z]
+              else
+                pos,currentmap = nil,nil
+              end
+            end
+          elseif i == 4 then
+            if ind == 1 then
+              if map[v.y-(1*m)] ~= nil and map[v.y-(1*m)][v.x+z] ~= nil then
+                pos = {y=v.y-(1*m),x=v.x+z}
+                currentmap = map[v.y-(1*m)][v.x+z]
+              else
+                pos,currentmap = nil,nil
+              end
+            elseif ind == 2 then
+              if map[v.y-(1*m)] ~= nil and map[v.y-(1*m)][v.x-z] ~= nil then
+                pos = {y=v.y-(1*m),x=v.x-z}
+                currentmap = map[v.y-(1*m)][v.x-z]
+              else
+                pos,currentmap = nil,nil
+              end
+            end
+          end
+          if currentmap ~= nil and pos ~= nil and currentmap.type == "floor" then
+            table.insert(temptable,{y=pos.y,x=pos.x,map=currentmap})
+          elseif currentmap ~= nil and pos ~= nil and currentmap.type == "wall" then
+            break --if find wall then stop looking this direction
+          end
+        end
+      end
+      if i == 1 then
+        if map[v.y][v.x+(1*m)] ~= nil then
+          pos = {y=v.y,x=v.x+(1*m)}
+          currentmap = map[v.y][v.x+(1*m)]
+        else
+          pos,currentmap = nil,nil
+        end
+      elseif i == 2 then
+        if map[v.y][v.x-(1*m)] ~= nil then
+          pos = {y=v.y,x=v.x-(1*m)}
+          currentmap = map[v.y][v.x-(1*m)]
+        else
+          pos,currentmap = nil,nil
+        end
+      elseif i == 3 then
+        if map[(1*m)+v.y] ~= nil then
+          pos = {y=(1*m)+v.y,x=v.x}
+          currentmap = map[(1*m)+v.y][v.x]
+        else
+          pos,currentmap = nil,nil
+        end
+      elseif i == 4 then
+        if map[v.y-(1*m)] ~= nil then
+          pos = {y=v.y-(1*m),x=v.x}
+          currentmap = map[v.y-(1*m)][v.x]
+        else
+          pos,currentmap = nil,nil
+        end
+      end
+      if currentmap ~= nil and pos ~= nil and currentmap.type == "floor" then
+        table.insert(temptable,{y=pos.y,x=pos.x,map=currentmap})
+      elseif currentmap ~= nil and pos ~= nil and currentmap.type == "wall" then
+        break --if find wall then stop looking this direction
+      end
+    end
+  end
+  return temptable
+end
+
+function checkattackspots(info)
+  local v,currentmap,pos,temptable,i,checkthing = info[1],{},{},{},info[3],0
+  for ind5,var5 in pairs(v.attackshape) do
+    i = info[3]
+    if var5[1] == "left" then
+      i = i + 3
+      if i > 4 then
+        i = i - 4
+      end
+    elseif var5[1] == "right" then
+      i = i + 1
+      if i > 4 then
+        i = i - 4
+      end
+    elseif var5[1] == "down" then
+      i = i + 2
+      if i > 4 then
+        i = i - 4
+      end
+    end
+    for ind=1,3 do --all spaces
+      for m=1,info[2] do --range outwards
+        if m > 1 then
+          m = m+(m-1)
+        end
+        for ind1=1,#var5-1 do
+        --if #v.attackshape+(1*m) > info[2] then---------check
+          --break
+        --end
+        if i == 2 then
+          if ind == 1 then ----------1
+            if map[v.y+1] ~= nil and map[v.y+1][v.x+(ind1+m)-1] ~= nil then
+              pos = {y=v.y+1,x=v.x+(ind1+m)-1}
+              currentmap = map[v.y+1][v.x+(ind1+m)-1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 2 then
+            if map[v.y][v.x+(ind1+m)-1] ~= nil then
+              pos = {y=v.y,x=v.x+(ind1+m)-1}
+              currentmap = map[v.y][v.x+(ind1+m)-1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 3 then
+            if map[v.y-1] ~= nil and map[v.y-1][v.x+(ind1+m)-1] ~= nil then
+              pos = {y=v.y-1,x=v.x+(ind1+m)-1}
+              currentmap = map[v.y-1][v.x+(ind1+m)-1]
+            else
+              pos,currentmap = nil,nil
+            end
+          end
+        elseif i == 4 then -------------2
+          if ind == 1 then
+            if map[v.y+1] ~= nil and map[v.y+1][v.x-(ind1+m)+1] ~= nil then
+              pos = {y=v.y+1,x=v.x-(ind1+m)+1}
+              currentmap = map[v.y+1][v.x-(ind1+m)+1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 2 then
+            if map[v.y][v.x-(ind1+m)+1] ~= nil then
+              pos = {y=v.y,x=v.x-(ind1+m)+1}
+              currentmap = map[v.y][v.x-(ind1+m)+1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 3 then
+            if map[v.y-1] ~= nil and map[v.y-1][v.x-(ind1+m)+1] ~= nil then
+              pos = {y=v.y-1,x=v.x-(ind1+m)+1}
+              currentmap = map[v.y-1][v.x-(ind1+m)+1]
+            else
+              pos,currentmap = nil,nil
+            end
+          end
+        elseif i == 1 then ----------3
+          if ind == 1 then
+            if map[(ind1+m)-1+v.y] ~= nil and map[(ind1+m)-1+v.y][v.x+1] ~= nil then
+              pos = {y=(ind1+m)-1+v.y,x=v.x+1}
+              currentmap = map[(ind1+m)-1+v.y][v.x+1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 2 then
+            if map[(ind1+m)-1+v.y] ~= nil then
+              pos = {y=(ind1+m)-1+v.y,x=v.x}
+              currentmap = map[(ind1+m)-1+v.y][v.x]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 3 then
+            if map[(ind1+m)-1+v.y] ~= nil and map[(ind1+m)-1+v.y][v.x-1] ~= nil then
+              pos = {y=(ind1+m)-1+v.y,x=v.x-1}
+              currentmap = map[(ind1+m)-1+v.y][v.x-1]
+            else
+              pos,currentmap = nil,nil
+            end
+          end
+        elseif i == 3 then -------------4
+          if ind == 1 then
+            if map[v.y-(ind1+m)+1] ~= nil and map[v.y-(ind1+m)+1][v.x+1] ~= nil then
+              pos = {y=v.y-(ind1+m)+1,x=v.x+1}
+              currentmap = map[v.y-(ind1+m)+1][v.x+1]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 2 then
+            if map[v.y-(ind1+m)+1] ~= nil then
+              pos = {y=v.y-(ind1+m)+1,x=v.x}
+              currentmap = map[v.y-(ind1+m)+1][v.x]
+            else
+              pos,currentmap = nil,nil
+            end
+          elseif ind == 3 then
+            if map[v.y-(ind1+m)+1] ~= nil and map[v.y-(ind1+m)+1][v.x-1] ~= nil  then
+              pos = {y=v.y-(ind1+m)+1,x=v.x-1}
+              currentmap = map[v.y-(ind1+m)+1][v.x-1]
+            else
+              pos,currentmap = nil,nil
+            end
+          end
+        end
+        if currentmap ~= nil and pos ~= nil and currentmap.type == "floor" then
+          if v.attackshape[ind5][ind1+1][ind] == "attack" then
+            currentmap.obj.highlightOn({0.8,0.2,0.2}, 5)
+            table.insert(temptable,{y=pos.y,x=pos.x,map=currentmap})
+          end
+        elseif currentmap ~= nil and pos ~= nil and currentmap.type == "wall" then
+          break --if find wall then stop looking this direction
+        end
+      end
+      end
+    end
+  end
+  return temptable
+end
+
+function waitFrames(frames)
+    while frames > 0 do
+    coroutine.yield(0)
+    frames = frames - 1
+    end
+end
