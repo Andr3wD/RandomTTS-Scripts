@@ -1,0 +1,39 @@
+-- Workshop url: https://steamcommunity.com/sharedfiles/filedetails/?id=1122718379
+-- One of the first scripts that I made
+-- Created by DeathKnight1003 --
+function onChat(msg, plyr)
+  if string.lower(string.sub(msg,1,6)) == "!guess" and string.sub(msg,8) ~= password then
+    correct = 0
+    local guess, numb = string.sub(msg,8), 0
+    numb = 1
+    for i=1,string.len(guess) do
+      if string.sub(guess,numb,numb) == string.sub(password,numb,numb) then
+        correct = correct + 1
+      end
+      numb = numb + 1
+    end
+    printToColor("You got " .. correct .. " correct in the right order.", plyr.color,{255,255,255})
+    correct = 0
+    return false
+  elseif string.lower(string.sub(msg,1,6)) == "!guess" and string.sub(msg,8) == password then
+    broadcastToAll(plyr.steam_name .. " guessed the password: " .. password .. ".\nResetting password", {255,255,255})
+    correct = 0
+    genpassword()
+    return false
+  end
+end
+
+function onload()
+  correct = 0
+  genpassword()
+end
+
+function genpassword()
+  correct = 0
+  passwordlength = 5
+  password = math.random(1,9)
+  while passwordlength > 0 do
+    passwordlength = passwordlength - 1
+    password = password .. math.random(1,9)
+  end
+end
