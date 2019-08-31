@@ -1,0 +1,711 @@
+-- This code was the first version of the crime scanner for the game 'Stop Thief.' 
+-- The code with some minor changes (not made by me) and the rest of the game is 
+--   currently at https://steamcommunity.com/sharedfiles/filedetails/?id=1582428451
+-- Made by DeathKnight1003 --
+-- Thanks to MoreThanTom from discord for the insperation --
+
+function onload()
+   failArrestChance = 0.1 --0-1
+   thiefNotMoveChance = 0.1 -- 0-1
+   self.createButton({
+      click_function = "buttonZero",
+      function_owner = self,
+      position       = {0.05,2.1,-1.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonEight",
+      function_owner = self,
+      position       = {0.05,2.1,0.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonSix",
+      function_owner = self,
+      position       = {0.05,2.1,2.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonFour",
+      function_owner = self,
+      position       = {0,2.1,4.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonTwo",
+      function_owner = self,
+      position       = {0,2.1,6.4},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+
+   self.createButton({
+      click_function = "buttonNine",
+      function_owner = self,
+      position       = {2.1,2.1,-1.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonSeven",
+      function_owner = self,
+      position       = {2.1,2.1,0.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonFive",
+      function_owner = self,
+      position       = {2.1,2.1,2.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonThree",
+      function_owner = self,
+      position       = {2.1,2.1,4.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonOne",
+      function_owner = self,
+      position       = {2.1,2.1,6.4},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+
+   self.createButton({
+      click_function = "buttonC",
+      function_owner = self,
+      position       = {-2.1,2.1,-1.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonA",
+      function_owner = self,
+      position       = {-2.1,2.1,0.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonT",
+      function_owner = self,
+      position       = {-2.1,2.1,2.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonOn",
+      function_owner = self,
+      position       = {-2.1,2.1,4.5},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+   self.createButton({
+      click_function = "buttonOff",
+      function_owner = self,
+      position       = {-2.1,2.1,6.4},
+      width          = 850,
+      height         = 800,
+      color = {1,1,1,0},
+      rotation = {0,180,0}
+   })
+
+   self.createButton({
+      click_function = "none",
+      function_owner = self,
+      position       = {0,2.3,9},
+      width          = 1500,
+      height         = 800,
+      color = {0,0,0},
+      rotation = {0,180,0},
+      font_size = 300,
+      font_color = "Red",
+   })
+   map = {
+      {pos={5,09},type="S",near={{5,19},{5,07},{8,19}}},
+      {pos={5,19},type="S",near={{5,09},{5,39},{1,28}}},
+      {pos={5,39},type="S",near={{5,19},{1,48},{1,28},{5,59}}},
+      {pos={5,59},type="S",near={{5,39},{1,48},{1,68},{5,79}}},
+      {pos={5,79},type="S",near={{5,59},{5,99},{1,68}}},
+      {pos={5,99},type="SS",near={{5,79},{5,97}}},
+      {pos={5,97},type="S",near={{5,99},{5,95}}},
+      {pos={5,95},type="S",near={{5,97},{5,93},{1,85}}},
+      {pos={5,93},type="S",near={{5,95},{5,91},{1,85},{1,82}}},
+      {pos={5,91},type="S",near={{1,82},{6,90},{5,93}}},
+      {pos={6,90},type="S",near={{5,91},{6,70},{6,91}}},
+      {pos={6,70},type="S",near={{6,90},{1,71},{2,71},{6,50}}},
+      {pos={6,50},type="S",near={{6,70},{1,71},{2,71},{1,51},{2,51},{6,30}}},
+      {pos={6,30},type="S",near={{1,31},{2,31},{6,50},{6,10},{1,51},{2,51}}},
+      {pos={6,10},type="S",near={{6,30},{1,31},{2,31},{5,00}}},
+      {pos={5,00},type="SS",near={{5,01},{8,10},{6,10},{7,01}}},
+      {pos={5,01},type="S",near={{5,00},{1,13},{4,13},{5,03}}},
+      {pos={5,03},type="S",near={{1,13},{4,13},{5,01},{5,05}}},
+      {pos={5,05},type="S",near={{5,03},{1,17},{5,07}}},
+      {pos={5,07},type="S",near={{5,05},{1,17},{5,09}}},
+      {pos={1,17},type="D",near={{{5,07},{5,05}},{{1,27},{1,26},{1,28}}}},
+      {pos={1,68},type="D",near={{{5,59},{5,79}},{{1,67},{1,57}}}},
+      {pos={1,57},type="D",near={{{1,48},{1,47},{1,46}},{{1,67},{1,68},{1,66}}}},
+      {pos={1,36},type="D",near={{{1,26},{1,27},{1,25}},{{1,46},{1,47}}}},
+      {pos={1,25},type="D",near={{{1,26},{1,36}},{{1,24}}}},
+      {pos={1,24},type="D",near={{{1,25}},{{1,23},{1,13}}}},
+      {pos={1,13},type="D",near={{{5,03},{5,01}},{{1,23},{1,24}}}},
+      {pos={1,42},type="D",near={{{1,32},{1,31}},{{1,52},{1,53},{1,51}}}},
+      {pos={1,62},type="D",near={{{1,52},{1,51},{1,53}},{{1,72},{1,71},{1,73}}}},
+      {pos={1,82},type="D",near={{{1,71},{1,72},{1,73}},{{5,91},{5,93}}}},
+      {pos={1,31},type="D",near={{{1,32},{1,42}},{{6,30},{6,10}}}},
+      {pos={1,65},type="D",near={{{1,64},{1,54}},{{1,66},{1,76}}}},
+      {pos={1,28},type="W",near={{{1,27,1,17}},{{5,19},{5,39}}}},
+      {pos={1,48},type="W",near={{{1,47},{1,57}},{{5,39},{5,59}}}},
+      {pos={1,85},type="W",near={{{1,76}},{{5,59},{5,93}}}},
+      {pos={1,51},type="W",near={{{6,50},{6,30}},{{1,52},{1,62},{1,42}}}},
+      {pos={1,71},type="W",near={{{6,70},{6,50}},{{1,72},{1,62},{1,82}}}},
+      {pos={1,23},type="C",near={{1,13},{1,24},{1,32}}},
+      {pos={1,44},type="C",near={{1,54},{1,53}}},
+      {pos={1,64},type="C",near={{1,54},{1,53},{1,65},{1,73}}},
+      {pos={1,46},type="C",near={{1,47},{1,36},{1,57}}},
+      {pos={1,27},type="F",near={{1,17},{1,28},{1,26},{1,36}}},
+      {pos={1,26},type="F",near={{1,27},{1,36},{1,17},{1,25}}},
+      {pos={1,47},type="F",near={{1,36},{1,46},{1,57},{1,48}}},
+      {pos={1,67},type="F",near={{1,57},{1,66},{1,68},{1,76}}},
+      {pos={1,66},type="F",near={{1,67},{1,76},{1,65}}},
+      {pos={1,76},type="F",near={{1,66},{1,67},{1,65},{1,85}}},
+      {pos={1,54},type="F",near={{1,44},{1,64},{1,65},{1,53}}},
+      {pos={1,53},type="F",near={{1,54},{1,44},{1,64},{1,52},{1,62},{1,42}}},
+      {pos={1,52},type="F",near={{1,42},{1,62},{1,53},{1,51}}},
+      {pos={1,32},type="F",near={{1,42},{1,31},{1,23}}},
+      {pos={1,72},type="F",near={{1,62},{1,71},{1,82},{1,73}}},
+      {pos={1,73},type="F",near={{1,72},{1,82},{1,62},{1,64}}},
+      {pos={4,13},type="D",near={{{4,23},{4,24}},{{5,03},{5,01}}}},
+      {pos={4,24},type="D",near={{{4,23},{4,13}},{{4,25}}}},
+      {pos={4,26},type="D",near={{{4,25}},{{4,27},{4,37}}}},
+      {pos={4,37},type="D",near={{{4,26},{4,27},{4,28}},{{4,48},{4,47},{4,46}}}},
+      {pos={4,56},type="D",near={{{4,67},{4,66},{4,65}},{{4,46},{4,45},{4,47}}}},
+      {pos={4,68},type="D",near={{{8,59},{8,79}},{{4,67},{4,77}}}},
+      {pos={4,77},type="D",near={{{4,87}},{{4,67},{4,66},{4,68}}}},
+      {pos={4,87},type="D",near={{{8,97},{8,95}},{{4,77}}}},
+      {pos={4,64},type="D",near={{{4,63}},{{4,65}}}},
+      {pos={4,44},type="D",near={{{4,45}},{{4,43}}}},
+      {pos={4,71},type="D",near={{{8,70},{8,50}},{{4,72},{4,82}}}},
+      {pos={4,41},type="D",near={{{4,52},{4,42},{4,32}},{{8,50},{8,30}}}},
+      {pos={4,82},type="W",near={{{8,91},{8,93}},{{4,72},{4,71}}}},
+      {pos={4,48},type="W",near={{{4,47},{4,37}},{{8,39},{8,59}}}},
+      {pos={4,28},type="W",near={{{8,39},{8,19}},{{4,27},{4,37}}}},
+      {pos={4,63},type="C",near={{4,27},{4,64},{4,52}}},
+      {pos={4,65},type="C",near={{4,64},{4,66},{4,56}}},
+      {pos={4,67},type="C",near={{4,66},{4,68},{4,77},{4,56}}},
+      {pos={4,45},type="C",near={{4,46},{4,44},{4,56}}},
+      {pos={4,25},type="C",near={{4,26},{4,24}}},
+      {pos={4,72},type="F",near={{4,82},{4,71},{4,63}}},
+      {pos={4,52},type="F",near={{4,63},{4,42},{4,43},{4,41}}},
+      {pos={4,42},type="F",near={{4,41},{4,32},{4,43},{4,52}}},
+      {pos={4,43},type="F",near={{4,42},{4,44},{4,32},{4,52}}},
+      {pos={4,32},type="F",near={{4,42},{4,23},{4,43}}},
+      {pos={4,23},type="F",near={{4,24},{4,13},{4,32}}},
+      {pos={4,66},type="F",near={{4,65},{4,67},{4,77},{4,56}}},
+      {pos={4,46},type="F",near={{4,56},{4,45},{4,47},{4,37}}},
+      {pos={4,47},type="F",near={{4,48},{4,37},{4,46},{4,56}}},
+      {pos={4,27},type="F",near={{4,37},{4,28},{4,26}}},
+      {pos={8,10},type="S",near={{8,30},{5,00},{3,31}}},
+      {pos={8,30},type="S",near={{3,31},{4,41},{8,10},{8,50},{3,51}}},
+      {pos={8,50},type="S",near={{8,30},{3,51},{4,71},{8,70},{3,71},{4,41}}},
+      {pos={8,70},type="S",near={{3,71},{4,71},{8,50},{8,90}}},
+      {pos={8,90},type="S",near={{8,70},{7,91},{8,91}}},
+      {pos={8,91},type="S",near={{4,82},{8,90},{8,93}}},
+      {pos={8,93},type="S",near={{8,91},{4,82},{8,95}}},
+      {pos={8,95},type="S",near={{8,93},{8,97},{4,87}}},
+      {pos={8,97},type="S",near={{4,87},{8,95},{8,99}}},
+      {pos={8,99},type="SS",near={{8,97},{8,79}}},
+      {pos={8,79},type="S",near={{4,68},{8,59},{8,99}}},
+      {pos={8,59},type="S",near={{4,68},{4,48},{8,79},{8,39}}},
+      {pos={8,39},type="S",near={{8,59},{8,19},{4,48},{4,28}}},
+      {pos={8,19},type="S",near={{4,28},{5,09},{8,39}}},
+      {pos={3,31},type="D",near={{{8,30},{8,10}},{{3,32},{3,42}}}},
+      {pos={3,14},type="D",near={{{7,03},{7,01}},{{3,24},{3,25}}}},
+      {pos={3,25},type="D",near={{{3,24},{3,14}},{{3,26}}}},
+      {pos={3,44},type="D",near={{{3,33}},{{3,54},{3,55},{3,45}}}},
+      {pos={3,65},type="D",near={{{3,55},{3,54}},{{3,76},{3,75},{3,74}}}},
+      {pos={3,67},type="D",near={{{3,57},{3,58}},{{3,76}}}},
+      {pos={3,47},type="D",near={{{3,37}},{{3,57},{3,58}}}},
+      {pos={3,28},type="D",near={{{3,27},{3,37},{3,17}},{{7,19},{7,39}}}},
+      {pos={3,62},type="D",near={{{3,52},{3,51}},{{3,72},{3,71},{3,73}}}},
+      {pos={3,73},type="D",near={{{3,72},{3,62}},{{3,74},{3,84}}}},
+      {pos={3,86},type="D",near={{{3,76},{3,75}},{{7,95},{7,97}}}},
+      {pos={3,51},type="W",near={{{8,50},{8,30}},{{3,52},{3,62},{3,42}}}},
+      {pos={3,71},type="W",near={{{8,70},{8,50}},{{3,72},{3,62}}}},
+      {pos={3,42},type="W",near={{{3,32},{3,33},{3,31}},{{3,52},{3,51}}}},
+      {pos={3,84},type="W",near={{{3,74},{3,73},{3,75}},{{7,93},{7,95}}}},
+      {pos={3,17},type="W",near={{{7,07},{7,05}},{{3,27},{3,28},{3,26}}}},
+      {pos={3,58},type="W",near={{{3,57},{3,67},{3,47}},{{7,59},{7,39}}}},
+      {pos={3,37},type="C",near={{3,47},{3,27},{3,28},{3,26}}},
+      {pos={3,55},type="C",near={{3,45},{3,54},{3,65},{3,44}}},
+      {pos={3,76},type="C",near={{3,86},{3,67},{3,75},{3,65}}},
+      {pos={3,52},type="C",near={{3,42},{3,51},{3,62}}},
+      {pos={3,32},type="F",near={{3,33},{3,42},{3,31}}},
+      {pos={3,33},type="F",near={{3,42},{3,32},{3,44},{3,24}}},
+      {pos={3,24},type="F",near={{3,33},{3,14},{3,25}}},
+      {pos={3,26},type="F",near={{3,25},{3,27},{3,37},{3,17}}},
+      {pos={3,27},type="F",near={{3,17},{3,28},{3,37},{3,26}}},
+      {pos={3,57},type="F",near={{3,58},{3,47},{3,67}}},
+      {pos={3,45},type="F",near={{3,55},{3,44},{3,54}}},
+      {pos={3,54},type="F",near={{3,55},{3,44},{3,45},{3,65}}},
+      {pos={3,75},type="F",near={{3,65},{3,74},{3,84},{3,76},{3,86}}},
+      {pos={3,74},type="F",near={{3,75},{3,65},{3,84},{3,73}}},
+      {pos={3,72},type="F",near={{3,62},{3,71},{3,73}}},
+      {pos={7,01},type="S",near={{7,03},{5,00}}},
+      {pos={7,03},type="S",near={{7,01},{2,14},{3,14},{7,05}}},
+      {pos={7,05},type="S",near={{7,03},{2,14},{3,14},{7,07},{3,17},{2,17}}},
+      {pos={7,07},type="S",near={{2,17},{3,17},{7,05},{7,09}}},
+      {pos={7,09},type="SC",near={{6,19},{7,19},{7,07}}},
+      {pos={7,19},type="S",near={{7,09},{3,28},{7,39}}},
+      {pos={7,39},type="S",near={{7,19},{3,28},{7,59},{3,58}}},
+      {pos={7,59},type="S",near={{7,39},{7,79},{3,58}}},
+      {pos={7,79},type="S",near={{7,99},{7,59}}},
+      {pos={7,99},type="SS",near={{7,79},{7,97}}},
+      {pos={7,97},type="S",near={{7,99},{3,86},{7,95}}},
+      {pos={7,95},type="S",near={{3,86},{7,97},{7,93},{3,84}}},
+      {pos={7,93},type="S",near={{7,95},{3,84},{7,91}}},
+      {pos={7,91},type="S",near={{8,90},{7,93}}},
+      {pos={6,91},type="S",near={{6,90},{6,93},{2,82}}},
+      {pos={6,93},type="S",near={{6,91},{6,95},{2,82},{2,84}}},
+      {pos={6,95},type="S",near={{6,93},{6,97},{2,86},{2,84}}},
+      {pos={6,97},type="S",near={{6,99},{6,95},{2,86}}},
+      {pos={6,99},type="SS",near={{6,97},{6,79}}},
+      {pos={6,79},type="S",near={{6,99},{6,59},{2,68}}},
+      {pos={6,59},type="S",near={{6,79},{2,68},{6,39}}},
+      {pos={6,39},type="S",near={{6,59},{6,19},{2,28}}},
+      {pos={6,19},type="S",near={{6,39},{2,28},{7,09}}},
+      {pos={2,51},type="D",near={{{6,50},{6,30}},{{2,52},{2,42}}}},
+      {pos={2,63},type="D",near={{{2,52}},{{2,72},{2,73},{2,74}}}},
+      {pos={2,82},type="D",near={{{2,72},{2,73}},{{6,91},{6,93}}}},
+      {pos={2,86},type="D",near={{{2,75},{2,76}},{{6,95},{6,97}}}},
+      {pos={2,68},type="D",near={{{2,67},{2,57}},{{6,79},{6,59}}}},
+      {pos={2,57},type="D",near={{{2,67},{2,68}},{{2,47}}}},
+      {pos={2,37},type="D",near={{{2,47}},{{2,27},{2,26},{2,28}}}},
+      {pos={2,14},type="D",near={{{7,03},{7,05}},{{2,25},{2,23}}}},
+      {pos={2,55},type="D",near={{{2,45}},{{2,65}}}},
+      {pos={2,17},type="W",near={{{2,27},{2,26},{2,28}},{{7,07},{7,05}}}},
+      {pos={2,28},type="W",near={{{2,27},{2,37},{2,17}},{{6,19},{6,39}}}},
+      {pos={2,35},type="W",near={{{2,45}},{{2,25},{2,26}}}},
+      {pos={2,31},type="W",near={{{6,30},{6,10}},{{2,42}}}},
+      {pos={2,71},type="W",near={{{6,70},{6,50}},{{2,72},{2,82}}}},
+      {pos={2,84},type="W",near={{{6,93},{6,95}},{{2,73},{2,74},{2,75}}}},
+      {pos={2,42},type="C",near={{2,52},{2,31},{2,51},{2,33}}},
+      {pos={2,45},type="C",near={{2,55},{2,35}}},
+      {pos={2,47},type="C",near={{2,57},{2,37}}},
+      {pos={2,67},type="C",near={{2,68},{2,57},{2,76}}},
+      {pos={2,65},type="C",near={{2,75},{2,76},{2,74},{2,55}}},
+      {pos={2,23},type="F",near={{2,33},{2,14}}},
+      {pos={2,33},type="F",near={{2,23},{2,42}}},
+      {pos={2,25},type="F",near={{2,26},{2,35},{2,14}}},
+      {pos={2,26},type="F",near={{2,25},{2,35},{2,27},{2,37},{2,17}}},
+      {pos={2,27},type="F",near={{2,26},{2,37},{2,28},{2,17}}},
+      {pos={2,52},type="F",near={{2,42},{2,51},{2,63}}},
+      {pos={2,72},type="F",near={{2,73},{2,71},{2,82},{2,63}}},
+      {pos={2,73},type="F",near={{2,72},{2,82},{2,63},{2,74},{2,84}}},
+      {pos={2,74},type="F",near={{2,73},{2,63},{2,84},{2,65},{2,75}}},
+      {pos={2,75},type="F",near={{2,74},{2,76},{2,65},{2,84},{2,86}}},
+      {pos={2,76},type="F",near={{2,75},{2,65},{2,67},{2,86}}},
+   }
+   thiefData = {data={},history={}}
+   globalHistory = {}
+   crimeSpots = compileCrimeSpots()
+   newsStand = true
+   doubleclick = false
+end
+
+function checkColor(col)
+   for i,v in pairs(Player.getPlayers()) do
+      if v.color == col then
+         return true
+      end
+   end
+   return false
+end
+
+function moveThief()
+   if #thiefData.history == 0 then  --first move
+      local mov = crimeSpots[math.random(1,#crimeSpots)]
+      thiefData.data = mov
+      if checkColor("Black") then
+         broadcastToColor("Thief moved: " .. thiefData.data.pos[1] .. "-" .. thiefData.data.pos[2], "Black")
+      end
+      broadcastToAll("Thief moved: " .. thiefData.data.pos[1] .. "-" .. thiefData.data.pos[2])
+      updateHistory()
+      playSound("C")
+   else --move is not first move
+
+      local lastlastmove = thiefData.history[#thiefData.history-1]
+      local lastmove = thiefData.history[#thiefData.history]
+      local possibleMoves = {}
+      if math.random(0,100) < thiefNotMoveChance*100 then
+         local mov = lastmove.pos
+         thiefData.data = getByPos(mov)
+         if checkColor("Black") then
+            broadcastToColor("Thief Didn't move: " .. thiefData.data.pos[1] .. "-" .. thiefData.data.pos[2], "Black")
+         end
+         broadcastToAll("Thief Didn't move: " .. thiefData.data.pos[1] .. "-" .. thiefData.data.pos[2])
+         playSound("stay")
+         table.insert(globalHistory, "Stay")
+         return
+      end
+
+      if lastmove.type == "D" or lastmove.type == "W" then --currently on window or door
+         for i,v in pairs(lastmove.near[1]) do
+            if v[1] == lastlastmove.pos[1] and v[2] == lastlastmove.pos[2] then --if same building and same lastlast move position, then don't use that grouping
+               break
+            end
+            if i == #lastmove.near[1] then
+               for i,var in pairs(lastmove.near[1]) do
+                  table.insert(possibleMoves,var)
+               end
+               break
+            end
+         end
+         for i,v in pairs(lastmove.near[2]) do
+            if v[1] == lastlastmove.pos[1] and v[2] == lastlastmove.pos[2] then --if same building and same lastlast move position, then don't use that grouping
+               break
+            end
+            if i == #lastmove.near[2] then
+               for i,var in pairs(lastmove.near[2]) do
+                  table.insert(possibleMoves,var)
+               end
+               break
+            end
+         end
+
+         --if crime space 1 move away, then take it
+         local mov = possibleMoves[math.random(1,#possibleMoves)]
+         for i,v in pairs(possibleMoves) do
+            if getByPos(v).type == "C" and getByPos(v).pos[1] ~= lastmove.pos[1] then
+               mov = v
+               break
+            end
+         end
+         thiefData.data = getByPos(mov)
+         if checkColor("Black") then
+            broadcastToColor("Thief moved: " .. thiefData.data.pos[1] .. "-" .. thiefData.data.pos[2], "Black")
+         end
+         broadcastToAll("Thief moved: " .. thiefData.data.pos[1] .. "-" .. thiefData.data.pos[2])
+         updateHistory()
+      else --last move was on floor/street/etc
+         local lastlastmove = thiefData.history[#thiefData.history-1]
+         local lastmove = thiefData.history[#thiefData.history]
+         local possibleMoves = {}
+         if lastmove.type == "S" then --restock crime spots when leaving building
+            crimeSpots = compileCrimeSpots()
+         end
+         for i,v in pairs(lastmove.near) do --don't take direct u-turns
+            if lastlastmove and v[1] == lastlastmove.pos[1] and v[2] == lastlastmove.pos[2] then --if lastlastmove exists and lastlastmove building and pos are the same, then don't add to possible moves
+            else
+               table.insert(possibleMoves,v)
+            end
+         end
+         --if crime space 1 move away, then take it
+         local mov = possibleMoves[math.random(1,#possibleMoves)]
+         for i,v in pairs(possibleMoves) do
+            if getByPos(v).type == "C" then
+               mov = v
+               break
+            end
+         end
+         thiefData.data = getByPos(mov)
+         if checkColor("Black") then
+            broadcastToColor("Thief moved: " .. thiefData.data.pos[1] .. "-" .. thiefData.data.pos[2], "Black")
+         end
+         broadcastToAll("Thief moved: " .. thiefData.data.pos[1] .. "-" .. thiefData.data.pos[2])
+         updateHistory()
+
+         if thiefData.data.type == "SS" and lastmove.type ~= "SS" then --thief on subway space
+            print("moving to subway")
+            local tt = {}
+            for i,v in pairs(map) do
+               if v.type == "SS" then
+                  table.insert(tt, v.pos)
+               end
+            end
+            local mov = tt[math.random(1,#tt)]
+            thiefData.data = getByPos(mov)
+            if checkColor("Black") then
+               broadcastToColor("Thief moved: " .. thiefData.data.pos[1] .. "-" .. thiefData.data.pos[2], "Black")
+            end
+            broadcastToAll("Thief moved: " .. thiefData.data.pos[1] .. "-" .. thiefData.data.pos[2])
+            updateHistory()
+            Wait.time(function() playSound("S") end,1.5)
+         end
+      end
+      playSound(thiefData.data.type)
+   end
+end
+
+function compileCrimeSpots()
+   local t = {}
+   for i,v in pairs(map) do
+      if v.type == "C" then
+         table.insert(t,v)
+      end
+   end
+   return t
+end
+
+function onChat(msg, plr)
+   if plr.admin == true then
+      if string.lower(msg) == "!log" then
+         local s = ""
+         for i,v in pairs(globalHistory) do
+            s = s .. "\nThief move: " .. v
+         end
+         printToColor(s, plr.color)
+      end
+      broadcastToAll("WARNING!\nPlayer: " .. plr.steam_name .. " is viewing all thief movements.", "Red")
+      return false
+   end
+end
+
+function updateHistory()
+   table.insert(thiefData.history,thiefData.data)
+   local new = thiefData.data
+   if new.type == "C" then
+      removeCrime(new.pos)
+   end
+   table.insert(globalHistory, new.type .. " " .. new.pos[1] .. "-" .. new.pos[2])
+end
+
+function removeCrime(pos)
+   for i,v in pairs(crimeSpots) do
+      if v.pos == pos then
+         table.remove(crimeSpots,i)
+         return
+      end
+   end
+end
+
+function getByPos(pos)
+   for i,v in pairs(map) do
+      if v.pos[1] == pos[1] and v.pos[2] == pos[2] then
+         return v
+      end
+   end
+   return false
+end
+
+function buttonOn(obj,col,alt)
+   if doubleclick then
+      doubleclick = false
+      thiefData = {data={},history={}}
+      crimeSpots = compileCrimeSpots()
+      moveThief()
+      setDisplay(thiefData.data.pos[1] .. " C")
+      inputs = {}
+      hideObject()
+   else
+      doubleclick = true
+      Wait.time(function() doubleclick = false end, 3)
+      broadcastToColor("Press on button again within 3 seconds to have a new thief.", col, "Red")
+   end
+end
+function buttonOff(obj,col,alt)
+   thiefData = {data={},history={}}
+   crimeSpots = compileCrimeSpots()
+   inputs = nil
+end
+function buttonOne(obj,col,alt)
+   if inputs then
+      playSound("stay")
+      table.insert(inputs,1)
+      checkArrest()
+   end
+end
+function buttonTwo(obj,col,alt)
+   if inputs then
+      playSound("stay")
+      table.insert(inputs,2)
+      checkArrest()
+   end
+end
+function buttonThree(obj,col,alt)
+   if inputs then
+      playSound("stay")
+      table.insert(inputs,3)
+      checkArrest()
+   end
+end
+function buttonFour(obj,col,alt)
+   if inputs then
+      playSound("stay")
+      table.insert(inputs,4)
+      checkArrest()
+   end
+end
+function buttonFive(obj,col,alt)
+   if inputs then
+      playSound("stay")
+      table.insert(inputs,5)
+      checkArrest()
+   end
+end
+function buttonSix(obj,col,alt)
+   if inputs then
+      playSound("stay")
+      table.insert(inputs,6)
+      checkArrest()
+   end
+end
+function buttonSeven(obj,col,alt)
+   if inputs then
+      playSound("stay")
+      table.insert(inputs,7)
+      checkArrest()
+   end
+end
+function buttonEight(obj,col,alt)
+   if inputs then
+      playSound("stay")
+      table.insert(inputs,8)
+      checkArrest()
+   end
+end
+function buttonNine(obj,col,alt)
+   if inputs then
+      playSound("stay")
+      table.insert(inputs,9)
+      checkArrest()
+   end
+end
+function buttonZero(obj,col,alt)
+   if inputs then
+      playSound("stay")
+      table.insert(inputs,0)
+      checkArrest()
+   end
+end
+
+function buttonC(obj,col,alt)
+   inputs = {}
+   moveThief()
+   local lastlastmove = thiefData.history[#thiefData.history-1]
+   local lastmove = thiefData.history[#thiefData.history]
+   setDisplay(thiefData.data.pos[1] .. " " .. thiefData.data.type)
+end
+
+function buttonA(obj,col,alt)
+   playSound("stay")
+   inputs = {}
+   table.insert(inputs,"arrest")
+end
+
+function buttonT(obj,col,alt)
+   broadcastToAll("Player " .. Turns.turn_color .. " has selected TIP.", "Red")
+   inputs = {}
+   setDisplay(thiefData.data.pos[1] .. "-" .. thiefData.data.pos[2])
+end
+
+function checkArrest()
+   if #inputs > 3 and inputs[1] == "arrest" and #thiefData.history > 0 then
+      broadcastToAll(thiefData.data.pos[2] .. "=?=" .. (inputs[3]*10) + inputs[4])
+      if thiefData.data.pos[1] == inputs[2] and thiefData.data.pos[2] == (inputs[3]*10) + inputs[4] then
+         if math.random(0,100) < failArrestChance*100 then
+            playSound("escape")
+            for i=1,math.random(5,6) do --thief runs 5-6 spaces
+               Wait.time(function() moveThief() end, 7.5+i*1.5)
+            end
+         else
+            newsStand = true
+            playSound("success")
+         end
+      else
+         playSound("false")
+      end
+      inputs = {}
+   end
+end
+
+function setDisplay(data)
+   for i,v in pairs(self.getButtons()) do
+      if v.click_function == "none" then
+         self.editButton({
+            index          = v.index,
+            label          = data,
+         })
+      end
+   end
+end
+
+function playSound(tile)
+   local o = getObjectFromGUID("e90f79")
+   if tile == "F" then
+      o.AssetBundle.playTriggerEffect(6)
+   elseif tile == "C" then
+      o.AssetBundle.playTriggerEffect(4)
+   elseif tile == "W" then
+      o.AssetBundle.playTriggerEffect(9)
+   elseif tile == "D" then
+      o.AssetBundle.playTriggerEffect(5)
+   elseif tile == "S" then
+      o.AssetBundle.playTriggerEffect(8)
+   elseif tile == "SS" then
+      o.AssetBundle.playTriggerEffect(7)
+   elseif tile == "SC" and newsStand then
+      newsStand = false
+      o.AssetBundle.playTriggerEffect(4)
+   elseif tile == "SC" and not newsStand then
+      o.AssetBundle.playTriggerEffect(8)
+   elseif tile == "success" then
+      o.AssetBundle.playTriggerEffect(2)
+   elseif tile == "false" then
+      o.AssetBundle.playTriggerEffect(1)
+   elseif tile == "escape" then
+      o.AssetBundle.playTriggerEffect(0)
+   elseif tile == "stay" then
+      o.AssetBundle.playTriggerEffect(3)
+   end
+end
+
+function onPlayerTurnStart(startcol, prevcol)
+   setDisplay("")
+   hideObject()
+end
+
+function hideObject()
+   for i,v in pairs(getSeatedPlayers()) do
+      if v ~= Turns.turn_color and v ~= "Black" then
+         self.attachHider("hideData", true, {v})
+      end
+   end
+end
+
+function none() end
