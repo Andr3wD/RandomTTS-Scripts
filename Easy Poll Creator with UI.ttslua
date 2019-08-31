@@ -1,0 +1,178 @@
+-- Workshop url: https://steamcommunity.com/sharedfiles/filedetails/?id=1454553018
+function onload()
+   UI.setXml(UI.getXml() .. "\n" .. makexml())
+   currentpoll = "No Current Poll"
+   pollanswers = {}
+   anonvoting = false
+end
+
+function onChat(msg,plr)
+   if plr.admin == true then
+      if string.lower(msg) == "!anonvoting" then
+         if anonvoting == true then
+            anonvoting = false
+            broadcastToAll("Anonymous voting has been disabled", "Red")
+         else
+            broadcastToAll("Anonymous voting has been enabled", "Green")
+            anonvoting = true
+         end
+      end
+   end
+end
+
+
+function makexml()
+   local txt = ""
+   for i,v in pairs(Player.getColors()) do
+      if v ~= "Grey" then
+         local g = self.getGUID()
+         txt = txt ..
+         [[<Panel id="]] .. v .. [[main" visibility="]] .. v .. [[" width="300" height="100" color="white" allowDragging="true" returnToOriginalPositionWhenReleased="false">
+            <Button id="]] .. v .. [[ min" onClick="]] .. g .. [[/minimize" width="30" height="30" color="white" position="-137 64">_</Button>
+            <Panel ignoreLayout="true" height="150" width="300" position="0 -126" active="False" color="white" id="]] .. v .. [[results">
+            <Text resizeTextMaxSize="20" resizeTextForBestFit="True" id="]] .. v .. [[resultstxt">NO CURRENT RESULTS</Text>
+
+            </Panel>
+            <Panel ignoreLayout="true" height="250" width="200" position="251 -75" active="False" color="white" id="]] .. v .. [[players">
+            <Text resizeTextMaxSize="20" resizeTextForBestFit="True" id="]] .. v .. [[playerstxt">No Current Voted Players</Text>
+            </Panel>
+            <Button id="]] .. v .. [[ vote" onClick="]] .. g .. [[/displayvoted" width="60" height="30" color="white" position="63 64">Voted</Button>
+            <Button id="]] .. v .. [[ view" onClick="]] .. g .. [[/viewresults" width="60" height="30" color="white" position="121 64">Results</Button>
+            <Button active="False" id="]] .. v .. [[endpoll" onClick="]] .. g .. [[/pollend" width="65" height="30" color="white" position="3 64">End Poll</Button>
+            <Text id="]] .. v .. [[txt" position="0 10">No Current Poll</Text>
+            <InputField placeholder="Poll Name or Poll Answer" id="]] .. v .. [[input" onEndEdit="]] .. g .. [[/pollenter" width="290" height="30" color="white" position="0 -30"></InputField>
+         </Panel>]]
+      end
+   end
+return txt
+end
+
+function minimize(plr,n,id)
+   id = string.sub(id,0,string.find(id," ")-1)
+   local a = UI.getAttribute(id .. "main", "height")
+   if a == "100" then
+      UI.setAttribute(id .. "main", "height", 0)
+      UI.setAttribute(id .. "main", "width", 0)
+      UI.setAttribute(id .. "input", "width", 0)
+      UI.setAttribute(id .. "input", "height", 0)
+      UI.setAttribute(id .. " vote", "height", 0)
+      UI.setAttribute(id .. " vote", "width", 0)
+      UI.setAttribute(id .. " view", "height", 0)
+      UI.setAttribute(id .. " view", "width", 0)
+      UI.setAttribute(id .. "results", "active", false)
+      UI.setAttribute(id .. "players", "active", false)
+   else
+      UI.setAttribute(id .. "main", "height", 100)
+      UI.setAttribute(id .. "main", "width", 300)
+      UI.setAttribute(id .. "input", "width", 290)
+      UI.setAttribute(id .. "input", "height", 30)
+      UI.setAttribute(id .. " vote", "height", 30)
+      UI.setAttribute(id .. " vote", "width", 60)
+      UI.setAttribute(id .. " view", "height", 30)
+      UI.setAttribute(id .. " view", "width", 60)
+   end
+end
+
+function displayvoted(plr,n,id)
+   id = string.sub(id,0,string.find(id," ")-1)
+   local a = UI.getAttribute(id .. "players", "active")
+   if a == "True" then
+      UI.setAttribute(id .. "players", "active", false)
+   else
+      UI.setAttribute(id .. "players", "active", true)
+   end
+end
+
+function viewresults(plr,n,id)
+   id = string.sub(id,0,string.find(id," ")-1)
+   local a = UI.getAttribute(id .. "results", "active")
+   if a == "True" then
+      UI.setAttribute(id .. "results", "active", false)
+   else
+      UI.setAttribute(id .. "results", "active", true)
+   end
+end
+
+function pollenter(plr,text,id)
+   if text == "" then
+      return
+   end
+   if currentpoll == "No Current Poll" then
+      if string.find(text,"%a") == nil then
+         broadcastToColor("You cannot have an empty name", plr.color, "Red")
+         return
+      end
+      currentpoll = "(" .. plr.steam_name .. ") " .. text
+      for i,v in pairs(Player.getColors()) do
+         if v ~= "Grey" then
+            UI.setAttribute(v .. "txt", "text",currentpoll)
+         end
+      end
+      UI.setAttribute(plr.color .. "endpoll", "active", "True")
+   else
+      if string.find(text,"%a") == nil then --if no alphabet characters then return
+         broadcastToColor("You cannot have an empty answer", plr.color, "Red")
+         return
+      end
+      for i,v in pairs(pollanswers) do
+         if v.id == plr.steam_id then
+            broadcastToColor("You cannot vote more than once.", plr.color, "Red")
+            return
+         end
+      end
+      table.insert(pollanswers, {answer=text,id=plr.steam_id,name=plr.steam_name})
+      if #pollanswers >= #getSeatedPlayers() then
+         pollend()
+      end
+      updatevotelist()
+   end
+   UI.setAttribute(plr.color .. "input", "text", "")
+   UI.setAttribute(plr.color .. "input", "placeholder", "Poll Name or Poll Answer")
+end
+
+function updatevotelist()
+local txt = "Voted:\n"
+   if #pollanswers > 0 then
+      for i,v in pairs(pollanswers) do
+         txt = txt .. v.name .. "\n"
+      end
+   else
+      txt = "No Current Voted Players"
+   end
+   for i,v in pairs(Player.getColors()) do
+      if v ~= "Grey" then
+         UI.setAttribute(v .. "playerstxt", "text", txt)
+      end
+   end
+end
+
+function pollend()
+local s = currentpoll .. ":"
+randomizetable(pollanswers)
+   for i,v in pairs(pollanswers) do
+      if anonvoting == true then
+         s = s .. "\n" .. v.answer
+      else
+         s = s .. "\n(" .. v.name .. ") " .. v.answer
+      end
+   end
+   currentpoll = "No Current Poll"
+   for i,v in pairs(Player.getColors()) do
+      if v ~= "Grey" then
+         UI.setAttribute(v .. "txt", "text", currentpoll)
+         UI.setAttribute(v .. "resultstxt", "text", s)
+         UI.setAttribute(v .. "endpoll", "active", "False")
+      end
+   end
+   pollanswers = {}
+end
+
+function randomizetable(tbl)
+   for i=1,#tbl do
+      if math.random(1,2) == 1 then
+         local rand = math.random(1,#tbl)
+         table.insert(tbl, tbl[rand])
+         table.remove(tbl, rand)
+      end
+   end
+end
