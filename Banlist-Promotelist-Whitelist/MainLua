@@ -1,0 +1,358 @@
+-- The workshop url for this script is https://steamcommunity.com/sharedfiles/filedetails/?id=1600215240
+
+--- Made by DeathKnight1003 https://steamcommunity.com/profiles/76561198041312957 ---
+--- If any help is needed with scripting, just message me. -DeathKnight1003
+--TODO: add GITHUB checking to see if using latest script and offer a way to update w/o losing info.
+
+function onload(info)
+   if info ~= "" and info ~= nil then
+      print("Whitelist/Banlist/Promotelist loaded from save.")
+      local info1 = JSON.decode(info)
+      whitelist = info1[1]
+      if info1[2] == nil then
+         promotelist = {}
+      else
+         promotelist = info1[2]
+      end
+      if info1[3] == nil then
+         banlist = {}
+      else
+         banlist = info1[3]
+      end
+   else
+      print("Whitelist/Banlist/Promotelist was not saved correctly or this is the first time loading the script. Either way, they are empty.")
+      whitelist = {}
+      promotelist = {}
+      banlist = {}
+   end
+   toggle = false
+   currentText = ""
+   page = 0
+   displayPromoteList("none")
+   currentPage = "promotePage"
+   inputText = ""
+   removeGrace = true
+   changes = 0
+   self.UI.setAttribute("toggleWhiteListButton", "Color", "Red")
+   self.UI.setAttribute("toggleWhiteListButton", "Text", "Off")
+end
+
+function onSave()
+   return JSON.encode({whitelist,promotelist,banlist})
+end
+
+function removeID(plr,alt,id)
+   if plr.admin then
+      if removeGrace then
+         removeGrace = false
+         local tempchanges = changes
+         Wait.time(
+         function()
+            if not removeGrace and changes == tempchanges then
+               removeGrace = true
+            end
+         end, 1)
+         plr.broadcast("Click ID again within 3 seconds to remove it from " .. currentPage)
+      else
+         removeGrace = true
+         changes = changes + 1
+         if currentPage == "promotePage" then
+            for i,v in pairs(promotelist) do
+               if tostring(v.id) == string.match(self.UI.getAttribute(id,"text"),"%w+") then
+                  plr.broadcast("Removing " .. v.id .. " from promote list.")
+                  for ind,var in pairs(Player.getPlayers()) do
+                     if var.steam_id == v.id and var.admin then
+                        var.promote()
+                     end
+                  end
+                  table.remove(promotelist, i)
+                  updatePage()
+                  return
+               end
+            end
+         elseif currentPage == "banPage" then
+            for i,v in pairs(banlist) do
+               if tostring(v.id) == string.match(self.UI.getAttribute(id,"text"),"%w+") then
+                  plr.broadcast("Removing " .. v.id .. " from ban list.")
+                  table.remove(banlist, i)
+                  updatePage()
+                  return
+               end
+            end
+         elseif currentPage == "whitelistPage" then
+            for i,v in pairs(whitelist) do
+               if tostring(v.id) == string.match(self.UI.getAttribute(id,"text"),"%w+") then
+                  plr.broadcast("Removing " .. v.id .. " from whitelist.")
+                  table.remove(whitelist, i)
+                  updatePage()
+                  return
+               end
+            end
+         end
+      end
+   end
+end
+
+function toggleUI(plr)
+   if plr.admin == true then
+      self.UI.setAttribute("mainPanel", "active", not toBool(self.UI.getAttribute("mainPanel", "active")))
+   end
+end
+
+function toggleWhiteList(plr)
+   if plr.admin then
+      if not toggle then
+         self.UI.setAttribute("toggleWhiteListButton", "Color", "Green")
+         self.UI.setAttribute("toggleWhiteListButton", "Text", "On")
+      else
+         self.UI.setAttribute("toggleWhiteListButton", "Color", "Red")
+         self.UI.setAttribute("toggleWhiteListButton", "Text", "Off")
+      end
+      toggle = not toggle
+   end
+end
+
+function toBool(s)
+   if string.lower(s) == "true" then
+      return true
+   else
+      return false
+   end
+end
+
+function pageEndEdit(plr,input)
+   if plr.admin then
+      page = tonumber(input)-1
+      updatePage()
+   end
+end
+
+function displayPromoteList(plr)
+   if plr.admin == true or plr == "none" then
+      clearPageIds()
+      currentPage = "promotePage"
+      for i=1,15 do
+         if(promotelist[page*15+i] ~= nil) then
+            self.UI.setAttribute("ID" .. i, "text", promotelist[page*15+i].id .. " : " .. promotelist[page*15+i].name)
+         else
+            break
+         end
+      end
+      self.UI.setAttribute("displayPromoteListButton", "Color", "Green")
+      self.UI.setAttribute("displayBanListButton", "Color", "White")
+      self.UI.setAttribute("displayWhiteListButton", "Color", "White")
+   end
+end
+
+function displayBanList(plr)
+   if plr.admin == true or plr == "none" then
+      clearPageIds()
+      currentPage = "banPage"
+      for i=1,15 do
+         if(banlist[page*15+i] ~= nil) then
+            self.UI.setAttribute("ID" .. i, "text", banlist[page*15+i].id .. " : " .. banlist[page*15+i].name)
+         else
+            break
+         end
+      end
+      self.UI.setAttribute("displayPromoteListButton", "Color", "White")
+      self.UI.setAttribute("displayBanListButton", "Color", "Green")
+      self.UI.setAttribute("displayWhiteListButton", "Color", "White")
+   end
+end
+
+function displayWhiteList(plr)
+   if plr.admin == true or plr == "none" then
+      clearPageIds()
+      currentPage = "whitelistPage"
+      for i=1,15 do
+         if(whitelist[page*15+i] ~= nil) then
+            self.UI.setAttribute("ID" .. i, "text", whitelist[page*15+i].id .. " : " .. whitelist[page*15+i].name)
+         else
+            break
+         end
+      end
+      self.UI.setAttribute("displayPromoteListButton", "Color", "White")
+      self.UI.setAttribute("displayBanListButton", "Color", "White")
+      self.UI.setAttribute("displayWhiteListButton", "Color", "Green")
+   end
+end
+
+function confirmAddition(plr)
+   if plr.admin == true then
+      if currentPage == "promotePage" then
+         for i,v in pairs(promotelist) do
+            if tostring(v.id) == inputText then
+               plr.broadcast("Player already exists in promote list.")
+               return
+            end
+         end
+         for i,v in pairs(Player.getPlayers()) do
+            if v.steam_id == inputText and not v.admin then
+               v.promote()
+            end
+         end
+         table.insert(promotelist,{id=inputText,name=""})
+         plr.broadcast(inputText .. " has been added to the promote list. Attempting to get player name, this may take a second.","Green")
+         displayPromoteList(plr)
+      elseif currentPage == "banPage" then
+         for i,v in pairs(banlist) do
+            if tostring(v.id) == inputText then
+               plr.broadcast("Player already exists in ban list.")
+               return
+            end
+         end
+         table.insert(banlist,{id=inputText,name=""})
+         plr.broadcast(inputText .. " has been added to the ban list. Attempting to get player name, this may take a second.","Green")
+         for i,v in pairs(Player.getPlayers()) do
+            if v.steam_id == inputText then
+               v.broadcast("You have been banned from the server.")
+               v.kick()
+            end
+         end
+         displayBanList(plr)
+      elseif currentPage == "whitelistPage" then
+         for i,v in pairs(whitelist) do
+            if tostring(v.id) == inputText then
+               plr.broadcast("Player already exists in whitelist.")
+               return
+            end
+         end
+         table.insert(whitelist,{id=inputText,name=""})
+         plr.broadcast(inputText .. " has been added to the whitelist. Attempting to get player name, this may take a second.","Green")
+         displayWhiteList(plr)
+      end
+      scrapeName(inputText,currentPage,plr)
+   end
+end
+
+function scrapeName(steamid,pg,plr)
+   function insidef()
+      local data = WebRequest.get("https://steamcommunity.com/profiles/" .. steamid)
+      local tries = 0
+      local maxtries = 100
+      while not data.is_done and tries < maxtries do
+         tries = tries+1
+         waitFrames(1)
+      end
+      local match = string.match(data.text,[[<span class="actual_persona_name">.+</span>]])
+      if match == nil then
+         if tries == maxtries then
+            plr.print("Timed out while trying to get player name.","Red")
+         else
+            plr.print("Couldn't find player name or servers are down.","Red")
+         end
+         return 1
+      end
+      local name = string.sub(match,35,string.find(match,"</span>")-1)
+      if pg == "promotePage" then
+         for i,v in pairs(promotelist) do
+            if v.id == steamid then
+               promotelist[i].name = name
+               updatePage()
+               return 1
+            end
+         end
+         plr.print("Couldn't find name or servers are down.","Red")
+      elseif pg == "banPage" then
+         for i,v in pairs(banlist) do
+            if v.id == steamid then
+               banlist[i].name = name
+               updatePage()
+               return 1
+            end
+         end
+         plr.print("Couldn't find name or servers are down.","Red")
+      elseif pg == "whitelistPage" then
+         for i,v in pairs(whitelist) do
+            if v.id == steamid then
+               whitelist[i].name = name
+               updatePage()
+               return 1
+            end
+         end
+         plr.print("Couldn't find name or servers are down.","Red")
+      end
+   return 1
+   end
+   startLuaCoroutine(self, "insidef")
+end
+
+function previousPage(plr)
+   if plr.admin == true then
+      if page > 0 then
+         page = page - 1
+         updatePage()
+      end
+   end
+end
+
+function nextPage(plr)
+   if plr.admin == true then
+      page = page + 1
+      updatePage()
+   end
+end
+
+function steamIdInEnd(plr,input,c,d)
+   inputText = input
+end
+
+function updatePage()
+   self.UI.setAttribute("pageCounter", "text", page+1)
+   if currentPage == "promotePage" then
+      displayPromoteList("none")
+   elseif currentPage == "banPage" then
+      displayBanList("none")
+   elseif currentPage == "whitelistPage" then
+      displayWhiteList("none")
+   end
+end
+
+function clearPageIds()
+   for i=1,15 do
+      self.UI.setAttribute("ID" .. i, "text", "")
+   end
+end
+
+function endEdit(plr,text,id)
+   currentText = text
+end
+
+function onPlayerConnect(plr)
+   for i,v in pairs(promotelist) do
+      if plr.steam_id == v.id then
+         plr.promote()
+         print("Player: " .. plr.steam_name .. " has been promoted.")
+      end
+   end
+   for i,v in pairs(banlist) do
+      if v.id == plr.steam_id then
+         for i=1,3 do
+            plr.broadcast("You have been kicked because you are banned from the server.")
+            plr.kick()
+            return
+         end
+      end
+   end
+end
+
+function onPlayerChangeColor(col)
+   if toggle == false or col == "Grey" or Player[col].admin == true or col == "Black" then
+      return
+   end
+   for i,v in pairs(whitelist) do
+      if Player[col].steam_id == v.id then
+         return
+      end
+   end
+   Player[col].broadcast("You have been kicked from attempting to sit in a color without being on the whitelist.", "Red")
+   Wait.time(function() Player[col].kick() end, 1.5)
+end
+
+function waitFrames(f)
+   while f > 0 do
+      f=f-1
+      coroutine.yield(0)
+   end
+end
