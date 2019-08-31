@@ -1,0 +1,239 @@
+-- This was an attempt at a blackjack learning machine, it isn't exactly a learning machine.
+function onload(info)
+   if info ~= nil and info ~= "" then
+      local info1 = JSON.decode(info)
+      data = info1[1]
+      wins = info1[2]
+      losss = info1[3]
+      randomchoicen = info1[4]
+      games = info1[5]
+      broadcastToAll("old data exsists and is loaded",{1,1,1})
+   else
+      data = {}
+      wins = 0
+      losss = 0
+      randomchoicen = 0
+      games = 0
+      broadcastToAll("old data does not exsist",{1,1,1})
+   end
+   maindecknumbs = {2,3,4,5,6,7,8,9,10,10,10,10,"ace",2,3,4,5,6,7,8,9,10,10,10,10,"ace",2,3,4,5,6,7,8,9,10,10,10,10,"ace",2,3,4,5,6,7,8,9,10,10,10,10,"ace"}
+   deckcount = 1
+   dealerhand = {}
+   selfhand = {}
+   rounds = 1500
+   makedeck()
+   startLuaCoroutine(self, "endround")
+end
+
+function makedeck()
+   globaldeck = {}
+   for i=1,deckcount do
+      for ind=1,#maindecknumbs do --could use table.unpack()
+         table.insert(globaldeck,maindecknumbs[ind])
+      end
+   end
+end
+
+function onScriptingButtonDown(ind,col)
+   if ind == 1 then
+      print("button down")
+      selfturn()
+   elseif ind == 2 then
+      broadcastToAll("Wins: ".. wins .. "   losses: " .. losss .. "   Random choices: " .. randomchoicen .. "   W/L: " .. wins/losss .. "  Games: " .. games, {1,1,1})
+   elseif ind == 3 then
+      self.script_state = JSON.encode({data,wins,losss,randomchoicen,games})
+      broadcastToAll("Forcing Game Save",stringColorToRGB("Blue"))
+   elseif ind == 4 then
+      rounds = 100
+      startLuaCoroutine(self, "endround")
+   elseif ind == 5 then
+      wins = 0
+      losss = 0
+      randomchoicen = 0
+      games = 0
+   elseif ind == 6 then
+      local bounds = getObjectFromGUID("4679d9").getBounds().size
+      for i=1,21 do
+         local obj = getObjectFromGUID("4679d9").clone({
+            position     = {bounds.x-25,bounds.y,bounds.z*-i+10},
+         })
+         obj.setName(i)
+      end
+      for i=1,11 do
+         local obj = getObjectFromGUID("4679d9").clone({
+            position     = {bounds.x*i-24,bounds.y,bounds.z+9},
+         })
+         obj.setName(i)
+      end
+      for i,v in pairs(data) do
+         local obj = getObjectFromGUID("4679d9").clone({
+            position     = {bounds.x*v.dealercount-24,bounds.y,bounds.z*-v.selfcount+10},
+         })
+         obj.setName("Hit: " .. v.hit .. "  " .. "Stand: " .. v.stand)
+         obj.setDescription("Dealer: " .. v.dealercount .. "  " .. "Self: " .. v.selfcount)
+         if v.stand > v.hit then
+            obj.setColorTint({0,0,0})
+         elseif v.hit > v.stand then
+            obj.setColorTint({1,1,1})
+         end
+      end
+   end
+end
+
+function addcardsup(info)
+   local cards = info[1]
+   local cardnumb = info[2] or #cards
+   local count = 0
+   for i,v in pairs(cards) do
+      if type(v) == "number" then
+         count = count + v
+      end
+      if i == cardnumb then
+         break
+      end
+   end
+   for i,v in pairs(cards) do --look at ace's last
+      if v == "ace" then
+         if count + 11 > 21 then --if ace = 11 busts, then use ace as a 1
+            count = count + 1
+         else
+            count = count + 11
+         end
+      end
+      if i == cardnumb then
+         break
+      end
+   end
+   return count
+end
+--data = {{selfcount=#,dealercount=#,stand=score,hit=score}}
+function selfturn()
+   local dealercount = addcardsup({dealerhand,1})
+   local selfcount = addcardsup({selfhand})
+   local info1 = checkdata({dealercount,selfcount})
+   table.insert(info11,info1)
+   local info = info11[1]
+   if info.stand == info.hit then
+      local randchoice = math.random(1,2)
+      print("random choice")
+      randomchoicen = randomchoicen + 1
+      if randchoice == 1 then
+         print("hitting on a " .. selfcount)
+         hit({info1})
+      elseif randchoice == 2 then
+         print("standing on a " .. selfcount)
+         dealerturn({info1})
+      end
+   elseif info.stand > info.hit then
+      print("standing on a " .. selfcount .. "  because " .. info.hit .. " < " .. info.stand)
+      dealerturn({info1})
+   elseif info.stand < info.hit then
+      print("hitting on a " .. selfcount .. "  because " .. info.hit .. " > " .. info.stand)
+      hit({info1})
+   end
+end
+
+function hit(info)
+   local carddataindex = info[1][2]
+   table.insert(selfhand,getdealcard())
+   if addcardsup({selfhand}) > 21 then
+      data[carddataindex].hit = data[carddataindex].hit - 1
+      printToAll("selfbust on a " .. addcardsup({selfhand}), stringColorToRGB("Red"))
+      losss = losss + 1
+      startLuaCoroutine(self, "endround")
+      return
+   end
+   --data[carddataindex].hit = data[carddataindex].hit + 2
+   selfturn()
+end
+
+function checkdata(info)
+   local dealercount = info[1]
+   local selfcount = info[2]
+   for i,v in pairs(data) do
+      if v.dealercount == dealercount and v.selfcount == selfcount then
+         return {v,i}
+      end
+   end
+   table.insert(data,{selfcount=selfcount,dealercount=dealercount,stand=0,hit=0})
+   return {data[#data],#data}
+end
+
+function dealerturn(info)
+   local carddata = info[1]
+   local dealercount = addcardsup({dealerhand})
+   while dealercount < 17 do
+      table.insert(dealerhand,getdealcard())
+      dealercount = addcardsup({dealerhand})
+   end
+   if dealercount > 21 then
+      --if #info11-1 > 0 then
+         --for i=1,#info11-1 do
+            --data[info11[i][2]].hit = data[info11[i][2]].hit + 2
+         --end
+      --end
+      data[carddata[2]].stand = data[carddata[2]].stand + 1
+      printToAll("dealer bust on a " .. dealercount,stringColorToRGB("Green"))
+      wins = wins + 1
+      startLuaCoroutine(self, "endround")
+   elseif dealercount == data[carddata[2]].selfcount then
+      printToAll("player push " .. data[carddata[2]].selfcount .. "  " .. dealercount, stringColorToRGB("Yellow"))
+      startLuaCoroutine(self, "endround")
+   elseif data[carddata[2]].selfcount == 21 then
+      data[carddata[2]].stand = data[carddata[2]].stand + 3
+      printToAll("player won with blackjack " .. data[carddata[2]].selfcount .. "  " .. dealercount,stringColorToRGB("Green"))
+      wins = wins + 1
+      startLuaCoroutine(self, "endround")
+   elseif dealercount > data[carddata[2]].selfcount then
+      printToAll("player lost " .. data[carddata[2]].selfcount .. "  " .. dealercount,stringColorToRGB("Red"))
+      data[carddata[2]].stand = data[carddata[2]].stand - 1
+      losss = losss + 1
+      startLuaCoroutine(self, "endround")
+   elseif dealercount < data[carddata[2]].selfcount then
+      data[carddata[2]].stand = data[carddata[2]].stand + 2
+      printToAll("player won " .. data[carddata[2]].selfcount .. "  " .. dealercount,stringColorToRGB("Green"))
+      wins = wins + 1
+      startLuaCoroutine(self, "endround")
+   end
+end
+
+function getdealcard()
+   if #globaldeck == 0 then
+      makedeck()
+   end
+   local randnumb = math.random(1,#globaldeck)
+   local card = globaldeck[randnumb]
+   table.remove(globaldeck,randnumb)
+   return card
+end
+
+function endround()
+   dealerhand = {}
+   selfhand = {}
+   info11 = {}
+   --start new round
+   printToColor("New Round", "White", stringColorToRGB("Red"))
+   table.insert(selfhand,getdealcard())
+   table.insert(dealerhand,getdealcard())
+   table.insert(selfhand,getdealcard())
+   table.insert(dealerhand,getdealcard())
+   waitFrames(1)
+   if rounds > 0 then
+      games = games + 1
+      rounds = rounds - 1
+      selfturn()
+   end
+   return 1
+end
+
+function onSave()
+   broadcastToAll("Game Saving",stringColorToRGB("Blue"))
+   return JSON.encode({data,wins,losss,randomchoicen,games})
+end
+
+function waitFrames(frames)
+  while frames > 0 do
+  coroutine.yield(0)
+  frames = frames - 1
+  end
+end
