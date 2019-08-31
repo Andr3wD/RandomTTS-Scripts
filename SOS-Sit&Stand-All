@@ -1,0 +1,52 @@
+-- Workshop url: https://steamcommunity.com/sharedfiles/filedetails/?id=1115264397
+function onload()
+   lock = {
+      click_function='Standall', function_owner=self, label='SOS',
+      position={0,0.5,0}, rotation={0,0,0}, width=500, height=500, font_size=400
+   }
+   self.createButton(lock)
+   playersave = {}
+   stand = true
+end
+
+function Standall(obj,col)
+   if Player[col].admin == true and stand == true then
+      local allp = Player.getPlayers()
+      for i,v in pairs(allp) do
+         if v.admin == false and v.color ~= "Grey" then
+            table.insert(playersave,{plr=v,color=v.color,id=v.steam_id,name=v.steam_name})
+            v.changeColor("Grey")
+         end
+      end
+      stand = false
+   elseif Player[col].admin == true and stand == false then
+      sitall()
+   end
+end
+
+function onPlayerChangedColor(pc)
+   if stand == false and pc ~= "Grey" and Player[pc].admin == false then
+      Player[pc].changeColor("Grey")
+      broadcastToAll("Sitting is disabled at this time.", {255,255,255})
+   end
+end
+
+function sitall()
+   for i,v in pairs(playersave) do --parse through all saved data
+      if v.plr.host == false then
+         if pcall(function() local t = v.plr.steam_id end) then
+            --no error, player still exists in server.
+            v.plr.changeColor(v.color)
+            if(Player[v.color].seated and tonumber(v.id) ~= tonumber(Player[v.color].steam_id)) then
+               broadcastToAll("Detecting seat for: " .. v.name .. " has been taken by:\n" .. Player[v.color].steam_name, stringColorToRGB(v.color))
+            end
+         else
+            --error, thus plr no longer exists.
+            broadcastToAll("Detecting player: " .. v.name .. " left the game.", stringColorToRGB(v.color))
+         end
+      end
+   end
+   playersave = {}
+   stand = true
+   broadcastToAll("The table has been unlocked.", "Red")
+end
