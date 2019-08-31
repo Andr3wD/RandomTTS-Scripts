@@ -1,0 +1,34 @@
+<!-- Workshop url with XML and script https://steamcommunity.com/sharedfiles/filedetails/?id=1600215240 -->
+<Defaults>
+   <Button colors="rgba(1,1,1,0.2)|White" onClick="removeID" class="typeid" width="1200" height="100" fontSize="50" horizontalOverflow="Overflow"/>
+</Defaults>
+
+
+<Panel id="mainPanel" active="true" color="" width="2000" height="2000" position="1050 -1050 0" visibility="Admin">
+   <Button onClick="nextPage" color="White" width="100" height="100" position="900 -900" fontSize="50">-&gt;</Button>
+   <Button onClick="previousPage" color="White" width="100" height="100" position="800 -900" fontSize="50">&lt;-</Button>
+   <Button onClick="confirmAddition" color="White" width="300" height="100" position="800 900" fontSize="50">Confirm</Button>
+   <Button onClick="displayBanList" id="displayBanListButton" color="White" width="300" height="100" position="-800 780" fontSize="50">BanList</Button>
+   <Button onClick="displayPromoteList" id="displayPromoteListButton" color="White" width="300" height="100" position="-800 900" fontSize="50">PromoteList</Button>
+   <Button onClick="displayWhiteList" id="displayWhiteListButton" color="White" width="300" height="100" position="-800 660" fontSize="50">WhiteList</Button>
+   <Button onClick="toggleWhiteList" id="toggleWhiteListButton" color="White" width="100" height="100" position="-600 660" fontSize="50"></Button>
+   <InputField onEndEdit="steamIdInEnd" color="White" width="1000" height="100" position="0 900" fontSize="50" placeholder="SteamID"></InputField>
+   <InputField characterValidation="Integer" onEndEdit="pageEndEdit" id="pageCounter" color="White" width="200" height="100" position="850 -800" fontSize="40" placeholder="Page#" horizontalOverflow="Wrap" tooltip="Edit me to jump to a specific page.">1</InputField>
+   <Button textColor="#FFFFFF" class="typeid" id="ID1" position="100 600"></Button>
+   <Button class="typeid" id="ID2" position="100 500"></Button>
+   <Button class="typeid" id="ID3" position="100 400"></Button>
+   <Button class="typeid" id="ID4" position="100 300"></Button>
+   <Button class="typeid" id="ID5" position="100 200"></Button>
+   <Button class="typeid" id="ID6" position="100 100"></Button>
+   <Button class="typeid" id="ID7" position="100 0"></Button>
+   <Button class="typeid" id="ID8" position="100 -100"></Button>
+   <Button class="typeid" id="ID9" position="100 -200"></Button>
+   <Button class="typeid" id="ID10" position="100 -300"></Button>
+   <Button class="typeid" id="ID11" position="100 -400"></Button>
+   <Button class="typeid" id="ID12" position="100 -500"></Button>
+   <Button class="typeid" id="ID13" position="100 -600"></Button>
+   <Button class="typeid" id="ID14" position="100 -700"></Button>
+   <Button class="typeid" id="ID15" position="100 -800"></Button>
+</Panel>
+
+<Button visibility="Admin" onClick="toggleUI" color="White" width="100" height="100" position="0 0 -51" fontSize="50">X</Button>
