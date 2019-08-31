@@ -1,3 +1,4 @@
+-- Workshop url with script: https://steamcommunity.com/sharedfiles/filedetails/?id=1350820527
 ----------- Made by DeathKnight1003 ---------------
 function onload()
    printtoeveryone = false --will print to everyone reguardless of status
@@ -16,14 +17,18 @@ function webcall(info)
    end
    if string.find(info.text,"This profile is private.") ~= nil then
       printtoadmins(connectplr.steam_name .. " has a private profile.",stringColorToRGB("Red"))
-   elseif string.find(info.text,[==[<div class="profile_ban">]==]) ~= nil then
-      local n,s = string.find(info.text,[==[<div class="profile_ban">]==])
-      local e,n = string.find(info.text,[==[game ban on record]==])
-      local n,e1 = string.find(info.text,[==[%s>Info</a></span>]==])
-      local s2,e2 = string.find(info.text, "%s%d*", e1+20)
-      printtoadmins(connectplr.steam_name .. " has " .. string.sub(info.text,s+3,e-2) .. " bans on record.\nLast ban was: " .. string.sub(info.text,s2,e2) .. " day(s) ago",stringColorToRGB("Red"))
+   elseif string.find(info.text,"This profile is private.") == nil then
+      local lvls,lvle = string.find(info.text,[==[<span class="friendPlayerLevelNum">]==])
+      local sss = string.match(info.text, "%d+", lvle)
+      printtoadmins(connectplr.steam_name .. " has a public profile with steam level: " .. sss .. ".",stringColorToRGB("Green"))
       WebRequest.get("http://steamcommunity.com/profiles/" .. connectplr.steam_id .. "/games/?tab=all", self, "webcall1")
-   elseif string.find(info.text,[==[<div class="profile_ban">]==]) == nil then
+   end
+   if string.find(info.text,[==[<div class="profile_ban">]==]) ~= nil then
+      local n,s = string.find(info.text,[==[<div class="profile_ban">%s*]==])
+      local e,n = string.find(info.text,[==[ban on record]==])
+      local n,e1 = string.find(info.text,[==[>Info</a></span>%s*</div>%s*]==])
+      local s2,e2 = string.find(info.text, "%d*", e1+1)
+      printtoadmins(connectplr.steam_name .. " has " .. string.sub(info.text,s+1,e-2) .. " bans on record.\nLast ban was: " .. string.sub(info.text,s2,e2) .. " day(s) ago",stringColorToRGB("Red"))
       WebRequest.get("http://steamcommunity.com/profiles/" .. connectplr.steam_id .. "/games/?tab=all", self, "webcall1")
    end
 end
