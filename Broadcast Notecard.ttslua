@@ -1,0 +1,37 @@
+-- Workshop url: https://steamcommunity.com/sharedfiles/filedetails/?id=1102492669
+-- This script requires itself to be on a notecard to work
+function onload()
+  button_parameters = {
+      click_function='broadcast', function_owner=self, label='B ',
+      position={0.45,3,0.42}, rotation={0,180,0}, width=50, height=80, font_size=40
+  }
+  self.createButton(button_parameters)
+  button_parameters = {
+      click_function='togglepromoted', function_owner=self, label="P",
+      position={-0.45,3,0.42}, rotation={0,180,0}, width=50, height=80, font_size=40
+  }
+  self.createButton(button_parameters)
+  promotedrequired = true
+end
+
+function broadcast(obj,col)
+  if promotedrequired == true then
+    if Player[col].admin == true then
+      broadcastToAll(self.getDescription(), {255,255,255})
+    end
+  else
+    broadcastToAll(self.getDescription(), {255,255,255})
+  end
+end
+
+function togglepromoted(obj,col)
+  if Player[col].admin == true then
+    if promotedrequired == true then
+      promotedrequired = false
+      broadcastToColor("The notecard no longer requires players to be promoted to use", col, {255,255,255})
+    elseif promotedrequired  == false then
+      broadcastToColor("The notecard requires players to be promoted to use", col, {255,255,255})
+      promotedrequired = true
+    end
+  end
+end
