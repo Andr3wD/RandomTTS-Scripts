@@ -1,0 +1,162 @@
+--This essentially brute forced objects with arrows on them to point to each other to form a loop, with the first one pointing to the next potentially infinitely until it gets back to the first one.
+function onload()
+   pastpieces = {}
+   rots1 = {{0.00, 270.00, 180.00},{0.00, 225.00, 180.00},{0.00, 180.00, 180.00},{0.00, 135.00, 180.00},{0.00, 90.00, 180.00},{0.00, 45.00, 180.00},{0.00, 0.00, 180.00},{0.00, 315.00, 180.00}}
+end
+
+function onScriptingButtonDown(ind,col)
+   if ind == 1 then
+      puzzlepieces1 = {}
+      for i,v in pairs(getAllObjects()) do
+         if v.tag == "Piecepack" then
+            table.insert(puzzlepieces1,v)
+         end
+      end
+      stop = false
+      pastpieces = {}
+      for i,v in pairs(puzzlepieces1) do
+         v.setColorTint({1,1,1})
+         v.setName("")
+      end
+      startLuaCoroutine(self, "generatepuzzle")
+   elseif ind == 2 then
+      stop = true
+   elseif ind == 3 then
+      puzzlepieces = {}
+      for i,v in pairs(getAllObjects()) do
+         if v.tag == "Piecepack" then
+            table.insert(puzzlepieces,v)
+         end
+      end
+      for i,v in pairs(puzzlepieces) do
+         local piecetbl = {}
+         for ind,var in pairs(rots1) do
+            if v.getLock() == true then
+               table.insert(piecetbl,var)
+               break
+            end
+            v.setRotation(var)
+            local cast = Physics.cast({
+               origin       = v.getPosition(),
+               direction    = invertvector(v.getTransformForward()),
+               type         = 1,
+               max_distance = 5,
+               debug        = false,
+            }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+            for ind1,var1 in pairs(cast) do
+               if var1.hit_object.tag == "Piecepack" then
+                  table.insert(piecetbl,var)
+                  break
+               end
+            end
+         end
+         v.setTable("rots", piecetbl)
+      end
+      stop = false
+      pastpieces = {}
+      for i,v in pairs(puzzlepieces) do
+         v.setColorTint({1,1,1})
+         v.setName("")
+      end
+      puzzlecount = 0
+      startLuaCoroutine(self, "generatepuzzle")
+   end
+end
+
+function generatepuzzle()
+   puzzlecount = puzzlecount + 1
+   local piece = puzzlepieces[math.random(1,#puzzlepieces)]
+   for i=1,#puzzlepieces do
+      local rots = shuffleTable(piece.getTable("rots"))
+      local lastrot = 0
+      local loop = true
+      --piece.setName(i)
+      table.insert(pastpieces,piece)
+      while loop == true do
+         lastrot = lastrot + 1
+         if lastrot > #rots then
+            redo()
+            return 1
+         end
+         if stop == true or piece.tag == "Surface" then
+            return 1
+         end
+         if piece.getLock() == false then
+            piece.setRotation(rots[lastrot])
+         end
+         local cast = Physics.cast({
+            origin       = piece.getPosition(),
+            direction    = invertvector(piece.getTransformForward()),
+            type         = 1,
+            max_distance = 5,
+            debug        = false,
+         }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+         past = false
+         local vobj
+         for ind1,var1 in pairs(cast) do
+            vobj = var1.hit_object
+            if vobj.tag == "Piecepack" then
+               break
+            else
+               past = true
+               loop = true
+               break
+            end
+         end
+         if vobj ~= nil and vobj.tag ~= "Surface" and past == false then
+            for ind,var in pairs(pastpieces) do
+               if var == vobj and #pastpieces ~= #puzzlepieces then
+                  past = true
+                  loop = true
+                  break
+               elseif var == vobj and #pastpieces >= #puzzlepieces and vobj == pastpieces[1] then
+                  past = true
+                  loop = false
+                  pastpieces[1].setColorTint(stringColorToRGB("Green"))
+                  piece.setColorTint(stringColorToRGB("Red"))
+                  break
+               end
+            end
+            if past == false and i ~= #puzzlepieces then
+               piece = vobj
+               loop = false
+            end
+         end
+      end
+   end
+   return 1
+end
+
+function redo()
+   function inside()
+      stop = true
+      if puzzlecount % 5 == 0 then
+         waitFrames(1)
+      end
+      pastpieces = {}
+      stop = false
+      startLuaCoroutine(self, "generatepuzzle")
+   return 1
+   end
+   startLuaCoroutine(self, "inside")
+end
+
+function invertvector(vec)
+   return {x=-vec.x,y=-vec.y,z=-vec.z}
+end
+
+function shuffleTable(tbl)
+  size = #tbl
+  for i = size, 1, -1 do
+    local rand = math.random(size)
+    tbl[i], tbl[rand] = tbl[rand], tbl[i]
+  end
+  return tbl
+end
+
+function waitFrames(frames)
+  while frames > 0 do
+  coroutine.yield(0)
+  frames = frames - 1
+  end
+end
