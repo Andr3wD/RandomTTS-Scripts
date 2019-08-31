@@ -36,6 +36,12 @@ function onload()
     piecemap[pos.x][pos.y].master = obj.getVar("master")
     piecemap[pos.x][pos.y].obj = obj
   end
+  hotseat = false
+  for i,v in pairs(Player.getPlayers()) do
+     if v.steam_name == "Player 1" then
+        hotseat = true
+     end
+  end
 end
 
 function checkspots()
@@ -151,7 +157,7 @@ function resetgame()
 end
 
 function onObjectPickedUp(col,obj)
-  if obj.getVar("pawn") == true and string.lower(col) == obj.getVar("col") then
+  if hotseat == true or (obj.getVar("pawn") == true and string.lower(col) == obj.getVar("col")) then
     updatepos({false})
     displaymovement({obj.getTable("pos"),obj})
   end
