@@ -1,0 +1,178 @@
+--Workshop url: https://steamcommunity.com/sharedfiles/filedetails/?id=1195750355
+function onload(info)
+  reseteverygame = true
+  if info ~= nil and info ~= "" then
+    local info1 = JSON.decode(info)
+    allplrrep = info1
+    if reseteverygame == true then
+      for i=1,#info1 do
+        info1[i].alreadyclicked = {}
+      end
+    end
+  else
+    allplrrep = {}
+  end
+  self.createButton({
+    click_function = "forcesave",
+    function_owner = self,
+    label          = "Save",
+    position       = {0,0.15,0},
+    width          = 300,
+    height         = 300,
+    color          = stringColorToRGB("Green"),
+  })
+  cloneobj = getObjectFromGUID("98af73")
+  allrepobjs = {}
+end
+function forcesave2()
+  for i,v in pairs(allrepobjs) do
+    for i,v in pairs(allrepobjs) do --parse through all rep objs
+      for ind,var in pairs(allplrrep) do --parse through all rep players
+        if var.owner == v.getVar("owner") then --if owner info already exsists then rewrite it
+          allplrrep[ind].count = v.getVar("count")
+          allplrrep[ind].alreadyclicked = v.getTable("alreadyclicked")
+          allplrrep[ind].votes = v.getVar("votes")
+        end
+      end
+    end
+    local jsoninfo = JSON.encode(allplrrep)
+    self.script_state = jsoninfo
+  end
+end
+
+function forcesave(obj,col)
+  if Player[col].admin == true then
+    forcesave2()
+  end
+end
+
+function onSave()
+  for i,v in pairs(allrepobjs) do --parse through all rep objs
+    for ind,var in pairs(allplrrep) do --parse through all rep players
+      if var.owner == v.getVar("owner") then --if owner info already exsists then rewrite it
+        allplrrep[ind].count = v.getVar("count")
+        allplrrep[ind].alreadyclicked = v.getTable("alreadyclicked")
+        allplrrep[ind].votes = v.getVar("votes")
+      end
+    end
+  end
+  local jsoninfo = JSON.encode(allplrrep)
+  return jsoninfo
+end
+
+function findplr(info)
+  local owner = Player[info[1]].steam_id
+  for i,v in pairs(allplrrep) do
+    if v.owner == owner then
+      return i
+    end
+  end
+printToAll("New user: " .. Player[info[1]].steam_name,stringColorToRGB("Blue"))
+table.insert(allplrrep,{votes=0,count=0,owner=owner,alreadyclicked={}})
+return #allplrrep
+end
+
+function things(info,col)
+  local col,newobj = col[1],info
+  local plrid = Player[col].steam_id
+  table.insert(allrepobjs, newobj)
+  local indx = findplr({col})
+  local v = allplrrep[indx]
+  local script =
+  [[
+  function onload()
+    count = ]] .. v.count .. [[
+    colowner = "]] .. col .. [["
+    owner = "]] .. plrid .. [["
+    votes = ]] .. v.votes .. [[
+    alreadyclicked = getObjectFromGUID("185edd").getTable("allplrrep")[]] .. indx .. [[].alreadyclicked
+    self.createButton({position={-0.36,0.5,0},height=500,width=50,click_function="upvote",function_owner=self,color=stringColorToRGB("Green")})
+    self.createButton({position={-0.1,0.5,0},height=500,width=50,click_function="downvote",function_owner=self,color=stringColorToRGB("Red")})
+    self.createButton({position={0.27,0.5,0.25},height=250,width=250,click_function="none",function_owner=self,color={1,1,1}})
+    self.createButton({font_size=50,position={0.27,0.5,-0.25},height=250,width=250,click_function="none",function_owner=self,color={1,1,1}})
+    updatebutton()
+  end
+
+  function upvote(obj,col)
+    change = 1
+    checkvote({col,"upvote"})
+  end
+
+  function updatebutton()
+    self.editButton({
+      index          = 2,
+      label          = tostring(math.ceil((count/votes)*100)),
+    })
+    self.editButton({
+      index          = 3,
+      label          = "+" .. math.abs(count) .. "/-" .. math.abs(votes-count),
+    })
+  end
+
+  function downvote(obj,col)
+    change = 0
+    checkvote({col,"downvote"})
+  end
+
+  function checkvote(info)
+    local plrid = Player[info[1]] .. "]]" .. [[.steam_id
+    if plrid == owner then
+      return
+    end
+    if alreadyclicked[1] ~= nil then
+      for i,v in pairs(alreadyclicked) do
+        if v.player == plrid then
+          if v.vote ~= info[2] then
+            alreadyclicked[i].vote = info[2]
+            if change == 0 then
+              count = count - 1
+            else
+              count = count + change
+            end
+            updatebutton()
+          end
+          return
+        end
+      end
+    end
+    table.insert(alreadyclicked,{player=plrid,vote=info[2]})
+    count = count + change
+    votes = votes + 1
+    updatebutton()
+  end
+
+  function none(obj,col)
+    printToColor("Upvotes/Downvotes/Votes:" .. count .. "/" .. votes-count .. "/" .. votes,col,{1,1,1})
+  end]]
+  newobj.setLuaScript(script)
+  newobj.setColorTint(stringColorToRGB(col))
+  newobj.setDescription(tostring(plrid))
+  newobj.setName(Player[col].steam_name .. "'s reputation token")
+end
+
+function onPlayerChangedColor(col)
+  if col ~= "Grey" and col ~= "Black" then
+    local pos,forw = Player[col].getHandTransform(1).position
+    spawnObject({
+      type           = "BlockSquare",
+      position       = {pos.x,pos.y,pos.z},
+      scale          = {1.60, 0.13, 1.60},
+      callback       = "things",
+      callback_owner = self,
+      params         = {col},
+    })
+  elseif col == "Grey" then
+    local seatedplrs = table.concat(getSeatedPlayers()," ")
+    for i,v in pairs(allrepobjs) do
+      local dothings = true
+      if string.find(seatedplrs, v.getVar("colowner")) ~= nil then
+        dothings = false
+      end
+      if dothings == true then
+        forcesave2()
+        v.destruct()
+        table.remove(allrepobjs, i)
+      end
+    end
+  end
+end
