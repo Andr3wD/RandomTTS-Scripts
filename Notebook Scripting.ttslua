@@ -1,0 +1,38 @@
+-- Workshop url: https://steamcommunity.com/sharedfiles/filedetails/?id=1108599681
+function onload()
+  local button_parameters = {
+      click_function='testscripts', function_owner=self, label='Script',
+      position={0,0.5,0}, rotation={0,0,0}, width=500, height=500, font_size=200
+
+  }
+  self.createButton(button_parameters)
+  addtabs = false -- true if you want tabs to be auto added for plauyers, false if you do not want that.
+  scriptobjs = {}
+end
+
+function testscripts(obj,col)
+  local selfpos = self.getPosition()
+  delobjpos = {selfpos.x,selfpos.y+2,selfpos.z}
+  addtab = addtabs
+  for ind,var in pairs(scriptobjs) do
+    if var.scol == Player[col].steam_id then
+      delobjpos = var.sobj.getPosition()
+      var.sobj.destruct()
+      table.remove(scriptobjs,ind)
+    end
+  end
+    for i,v in pairs(getNotebookTabs()) do
+      if v.title == Player[col].steam_id then
+        local spawnedobj = spawnObject({type="BlockRectangle",position=delobjpos})
+        table.insert(scriptobjs,{sobj=spawnedobj,scol=Player[col].steam_id})
+        spawnedobj.setName(Player[col].steam_name .. "'s Scripting Object")
+        spawnedobj.setLuaScript(v.body)
+        addtab = false
+      end
+    end
+  if addtab == true then
+    broadcastToAll("Making notebook tab for " .. col, {100,100,100})
+    addNotebookTab({title=Player[col].steam_id,color=col})
+  end
+  addtab = addtabs
+end
