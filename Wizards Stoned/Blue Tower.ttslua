@@ -1,0 +1,112 @@
+posmap = {{{5.828,1.306,5.324},{4.521,1.306,5.324},{3.214,1.306,5.324},{1.906,1.306,5.324},{0.599,1.306,5.324},{-0.70,1.306,5.324},{-2.01,1.306,5.324},{-3.32,1.306,5.324},{-4.62,1.306,5.324},{-5.93,1.306,5.324}},
+{{5.828,1.306,4.160},{4.521,1.306,4.160},{3.214,1.306,4.160},{1.906,1.306,4.160},{0.599,1.306,4.160},{-0.70,1.306,4.160},{-2.01,1.306,4.160},{-3.32,1.306,4.160},{-4.62,1.306,4.160},{-5.93,1.306,4.160}},
+{{5.828,1.306,2.996},{4.521,1.306,2.996},{3.214,1.306,2.996},{1.906,1.306,2.996},{0.599,1.306,2.996},{-0.70,1.306,2.996},{-2.01,1.306,2.996},{-3.32,1.306,2.996},{-4.62,1.306,2.996},{-5.93,1.306,2.996}},
+{{5.828,1.306,1.832},{4.521,1.306,1.832},{3.214,1.306,1.832},{1.906,1.306,1.832},{0.599,1.306,1.832},{-0.70,1.306,1.832},{-2.01,1.306,1.832},{-3.32,1.306,1.832},{-4.62,1.306,1.832},{-5.93,1.306,1.832}},
+{{5.828,1.306,0.667},{4.521,1.306,0.667},{3.214,1.306,0.667},{1.906,1.306,0.667},{0.599,1.306,0.667},{-0.70,1.306,0.667},{-2.01,1.306,0.667},{-3.32,1.306,0.667},{-4.62,1.306,0.667},{-5.93,1.306,0.667}},
+{{5.828,1.306,-0.49},{4.521,1.306,-0.49},{3.214,1.306,-0.49},{1.906,1.306,-0.49},{0.599,1.306,-0.49},{-0.70,1.306,-0.49},{-2.01,1.306,-0.49},{-3.32,1.306,-0.49},{-4.62,1.306,-0.49},{-5.93,1.306,-0.49}},
+{{5.828,1.306,-1.66},{4.521,1.306,-1.66},{3.214,1.306,-1.66},{1.906,1.306,-1.66},{0.599,1.306,-1.66},{-0.70,1.306,-1.66},{-2.01,1.306,-1.66},{-3.32,1.306,-1.66},{-4.62,1.306,-1.66},{-5.93,1.306,-1.66}},
+{{5.828,1.306,-2.82},{4.521,1.306,-2.82},{3.214,1.306,-2.82},{1.906,1.306,-2.82},{0.599,1.306,-2.82},{-0.70,1.306,-2.82},{-2.01,1.306,-2.82},{-3.32,1.306,-2.82},{-4.62,1.306,-2.82},{-5.93,1.306,-2.82}},
+{{5.828,1.306,-3.98},{4.521,1.306,-3.98},{3.214,1.306,-3.98},{1.906,1.306,-3.98},{0.599,1.306,-3.98},{-0.70,1.306,-3.98},{-2.01,1.306,-3.98},{-3.32,1.306,-3.98},{-4.62,1.306,-3.98},{-5.93,1.306,-3.98}},
+{{5.828,1.306,-5.15},{4.521,1.306,-5.15},{3.214,1.306,-5.15},{1.906,1.306,-5.15},{0.599,1.306,-5.15},{-0.70,1.306,-5.15},{-2.01,1.306,-5.15},{-3.32,1.306,-5.15},{-4.62,1.306,-5.15},{-5.93,1.306,-5.15}}}
+
+function onload()
+   familiar = getObjectFromGUID("87b2ec")
+   wizard = getObjectFromGUID("270b94")
+   gameboard = getObjectFromGUID("80a182")
+   self.createButton({
+      click_function = "up",
+      function_owner = self,
+      position       = {0,1.5,1},
+      width          = 400,
+      height         = 400,
+   })
+   self.createButton({
+      click_function = "down",
+      function_owner = self,
+      position       = {0,1.5,-1},
+      width          = 400,
+      height         = 400,
+   })
+   self.createButton({
+      click_function = "right",
+      function_owner = self,
+      position       = {-1,1.5,0},
+      width          = 400,
+      height         = 400,
+   })
+   self.createButton({
+      click_function = "left",
+      function_owner = self,
+      position       = {1,1.5,0},
+      width          = 400,
+      height         = 400,
+   })
+   self.createButton({
+      click_function = "select",
+      function_owner = self,
+      position       = {0,1.5,0},
+      width          = 400,
+      height         = 400,
+   })
+   currentlymoving = familiar
+end
+
+function select()
+   familiar.createButton({
+      click_function = "select2",
+      function_owner = self,
+      position       = {0,2,0},
+      width          = 500,
+      height         = 500,
+   })
+   wizard.createButton({
+      click_function = "select2",
+      function_owner = self,
+      position       = {0,1.5,0},
+      width          = 400,
+      height         = 400,
+   })
+end
+
+function select2(obj,col)
+   wizard.removeButton(0)
+   familiar.removeButton(0)
+   currentlymoving = obj
+end
+
+function up()
+   move({x=0,y=1})
+end
+
+function down()
+   move({x=0,y=-1})
+end
+
+function right()
+   move({x=1,y=0})
+end
+
+function left()
+   move({x=-1,y=0})
+end
+
+function move(info)
+   if currentlymoving.getVar("justmoved") == false then
+      selfpos = currentlymoving.getTable("selfpos")
+      power = tonumber(currentlymoving.getDescription())
+      currentlymoving.setTable("movingdir", info)
+      currentlymoving.setVar("power", power)
+      local pos = {x=info.x+selfpos.x,y=info.y+selfpos.y}
+      if posmap[pos.y] == nil or posmap[pos.y][pos.x] == nil then
+         return
+      end
+      selfpos.x = pos.x
+      selfpos.y = pos.y
+      currentlymoving.setTable("selfpos", selfpos)
+      local pos1 = gameboard.positionToWorld(posmap[pos.y][pos.x])
+      local pos2 = currentlymoving.getPosition()
+      startLuaCoroutine(currentlymoving,"waitlock2")
+      currentlymoving.setPositionSmooth({pos1.x,pos2.y,pos1.z},false,true)
+      currentlymoving.setRotation({0,0,0})
+   end
+end
