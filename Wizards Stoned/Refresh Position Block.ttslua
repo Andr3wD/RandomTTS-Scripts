@@ -1,0 +1,10 @@
+function onload()
+   self.createButton({
+      click_function = "refreshpos",
+      function_owner = Global,
+      label          = "Refresh\nPositions",
+      position       = {0,0.5,0},
+      width          = 500,
+      height         = 500,
+   })
+end
