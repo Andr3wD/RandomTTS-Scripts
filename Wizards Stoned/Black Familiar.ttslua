@@ -1,0 +1,84 @@
+function onload()
+   tower = getObjectFromGUID("5fbd26")
+   posmap = tower.getTable("posmap")
+   gameboard = getObjectFromGUID("80a182")
+   bowl = getObjectFromGUID("dff020")
+   justmoved = false
+   selfpos = {x=4,y=5}
+end
+
+function onCollisionEnter(info)
+   self.setVelocity({0,0,0})
+   self.setRotation({0,0,0})
+   local obj = info.collision_object
+   local tag = obj.tag
+   local pos = self.getPosition()
+   if tag ~= "Board" and tag ~= "Surace" and justmoved == false then
+      if obj.getTable("movingdir") then
+         movingdir = obj.getTable("movingdir")
+         selfpos = obj.getTable("selfpos")
+         power = obj.getVar("power")
+         startLuaCoroutine(self, "move")
+      end
+   end
+end
+
+--[[
+local pos2 = gameboard.positionToWorld(posmap[1][1])
+self.setPosition({pos2.x,pos2.y+2,pos2.z})
+selfpos = {x=1,y=1}
+self.setVelocity({0,0,0})
+]]
+
+function move()
+   local info = movingdir
+   local gotoi
+   for i=1,power do
+      if posmap[selfpos.y+info.y] == nil or posmap[selfpos.y+info.y][selfpos.x+info.x] == nil then
+         --local pos2 = gameboard.positionToWorld(posmap[1][1])
+         --self.setPosition({pos2.x,pos2.y+2,pos2.z})
+         local pos2 = bowl.getPosition()
+         self.setPosition({pos2.x,pos2.y+3,pos2.z})
+         selfpos = {x=1,y=1}
+         self.setVelocity({0,0,0})
+         movingdir = nil
+         return 1
+      end
+      local pos1 = gameboard.positionToWorld(posmap[selfpos.y+info.y][selfpos.x+info.x])
+      selfpos.x = selfpos.x+info.x
+      selfpos.y = selfpos.y+info.y
+      self.setPosition({pos1.x,2.75,pos1.z})
+      self.setVelocity({0,0,0})
+      self.setRotation({0,0,0})
+      ------------------------------
+      justmoved = true
+      waitFrames(5)
+      justmoved = false
+      if i == power then
+         movingdir = nil
+      end
+      local pos = gameboard.positionToWorld(posmap[selfpos.y][selfpos.x])
+      self.setPosition({pos.x,2.75,pos.z})
+   end
+return 1
+end
+
+function waitlock2()
+   self.setLock(true)
+   justmoved = true
+   waitFrames(25)
+   local pos = gameboard.positionToWorld(posmap[selfpos.y][selfpos.x])
+   local pos1 = self.getPosition()
+   self.setPosition({pos.x,pos1.y,pos.z})
+   self.setPosition(pos)
+   self.setLock(false)
+   justmoved = false
+return 1
+end
+
+function waitFrames(frames)
+  while frames > 0 do
+  coroutine.yield(0)
+  frames = frames - 1
+  end
+end
