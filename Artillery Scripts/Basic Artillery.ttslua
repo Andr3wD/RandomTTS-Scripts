@@ -1,0 +1,232 @@
+function onload() --setting objects for later reference
+   displace = {0,0}
+   reddi = getObjectFromGUID("4a9890")
+   whitedi = getObjectFromGUID("7ad3a0")
+   self.createInput({
+      label = "Dist.",
+      input_function = "inputinput",
+      function_owner = self,
+      alignment      = 1,
+      position       = {0,0,-0.5},
+      width          = 230,
+      height         = 110,
+      rotation = {0,180,0},
+      font_size = 80,
+   })
+   self.createButton({
+      click_function = "fire",
+      function_owner = self,
+      label          = "Fire!",
+      position       = {0,0,-0.75},
+      rotation       = {0,180,0},
+      width          = 230,
+      height         = 150,
+   })
+   waitred = false
+   waitwhite = false
+end
+
+function inputinput(obj,col,input,selected)
+   distance = input
+end
+
+function fire(obj,col)
+   if distance ~= "" then
+      self.setDescription("Last Distance: " .. tostring(distance))
+      startLuaCoroutine(self, "projectiletest")
+   end
+end
+
+function projectiletest() --Projectile stuff
+   local forward,pos = self.getTransformForward(),self.getPosition()
+   local r = self.getRotation()
+   projectile = spawnObject({
+      type           = "Custom_Model",
+      position       = {pos.x,pos.y+self.getBoundsNormalized().size.y+1,pos.z},
+      scale = {1.30, 1.30, 1.30},
+      rotation = {r.x,r.y+90,r.z},
+   })
+   projectile.setCustomObject({
+      mesh = "http://cloud-3.steamusercontent.com/ugc/958591416742249175/5E9CE69A13C5B6C5722A734D6394B7517B9DF080/",
+      diffuse = "http://cloud-3.steamusercontent.com/ugc/88223956361728788/836C2C5693D6E8513A7663C719CB889B1A1F3E59/",
+      normal = "http://cloud-3.steamusercontent.com/ugc/88223956361729318/9A7092DDBF1FCBBC738CA0574DDBBEAEDA33023A/",
+      type = 0,
+      material = 2,
+      fresnel_strength = 0,
+      specular_sharpness = 2,
+      specular_intensity = 0,
+   })
+
+   --[[projectile = spawnObject({ --Spawned obj
+   type           = "Metal Ball", --spawned obj type More info: http://berserk-games.com/knowledgebase/spawnable-objects/ http://berserk-games.com/knowledgebase/api/#spawnObject
+   position       = {pos.x,pos.y+self.getBoundsNormalized().size.y+1,pos.z},
+   scale = {0.5,0.5,0.5}
+})]]
+   waitFrames(3)
+   projectile.drag = 0
+   local tim = -30/Physics.getGravity().y
+   local vel = distance/tim
+   projectile.setVelocity({(forward.x*vel)/2,30,(forward.z*vel)/2})
+   projectile.setLuaScript(
+   [[
+   function onUpdate()
+      local v = self.getVelocity()
+      local r = self.getRotation()
+      self.setRotation({r.x,r.y,-v.y})
+   end
+   function onCollisionEnter(info)
+      getObjectFromGUID("]] .. self.guid .. [[").call("spawnmarker")
+      self.destruct()
+   end]])
+return 1
+end
+
+function spawnmarker()
+   local forward,pos = self.getTransformForward(),self.getPosition()
+   if distance ~= nil then
+      marker = spawnObject({
+         type           = "Custom_Model",
+         position       = {forward.x*distance+pos.x,forward.y+pos.y+50,forward.z*distance+pos.z},
+         scale = {0.45, 0.45, 0.45},
+      })
+      marker.setCustomObject({
+         mesh = "https://gist.githubusercontent.com/anonymous/db30441b6302bb789471/raw/7e6b735bfcaa51346f100fdea7be83d48ae828dc/gistfile1.txt",
+         diffuse = "http://i.imgur.com/mEgLbxn.png",
+         collider = "https://gist.githubusercontent.com/anonymous/acc0f943a13709bcf490/raw/f29038e430f10d48e1536c9b87cde036d64321bc/gistfile1.txt",
+         type = 1,
+         material = 3,
+         fresnel_strength = 0,
+         specular_sharpness = 2,
+         specular_intensity = 0
+      })
+      marker.setLuaScript([[
+      function onload()
+         local test = Physics.cast({
+            origin=self.getPosition(), direction={0,-1,0}, type=1
+         })
+         self.setPosition(test[1].point)
+      end
+      ]])
+      printToAll("Roll the dice", {255,255,255})
+   end
+end
+
+function onObjectRandomize(obj, col) --on dice randomize, run waitforred or waitforwhite
+   if obj == reddi and marker ~= nil and waitred == false then
+      waitred = true
+      startLuaCoroutine(self, "waitforred")
+   elseif obj == whitedi and marker ~= nil and waitwhite == false then
+      waitwhite = true
+      startLuaCoroutine(self, "waitforwhite")
+   end
+end
+
+function waitforred() --Waits for red dice to stop moving
+   while reddi.resting ~= true do
+      waitFrames(10)
+      if reddi.resting == true then
+         reddiv = reddi.getValue()
+         calculatedeviation()
+         waitred = false
+      end
+   end
+   return 1
+end
+
+function waitforwhite() --Waits for white dice to stop moving
+   while whitedi.resting ~= true do
+      waitFrames(10)
+      if whitedi.resting == true then
+         whitediv = whitedi.getValue()
+         calculatedeviation()
+         waitwhite = false
+      end
+   end
+   return 1
+end
+
+function waitFrames(frames) --Allows function to wait for a certain amount of frames
+   while frames > 0 do
+      coroutine.yield(0)
+      frames = frames - 1
+   end
+end
+
+function calculatedeviation() --{forward or -back,right or -left} This is the table translated into script.
+   if whitediv ~= nil and reddiv ~= nil then
+      if whitediv == 1 then
+         if reddiv == 1 or reddiv == 2 then
+            displace = {2,-2}
+         elseif reddiv == 3 or reddiv == 4 then
+            displace = {2,0}
+         elseif reddiv == 5 or reddiv == 6 then
+            displace = {2,2}
+         end
+      elseif whitediv == 2 then
+         if reddiv == 1 then
+            displace = {1,-2}
+         elseif reddiv == 2 then
+            displace = {1,-1}
+         elseif reddiv == 3 or reddiv == 4 then
+            displace = {1,0}
+         elseif reddiv == 5 then
+            displace = {1,1}
+         elseif reddiv == 6 then
+            displace = {1,2}
+         end
+      elseif whitediv == 3 or whitediv == 4 then
+         if reddiv == 1 then
+            displace = {0,-2}
+         elseif reddiv == 2 then
+            displace = {0,-1}
+         elseif reddiv == 3 or reddiv == 4 then
+            broadcastToAll("Hit", {255,255,255})
+         elseif reddiv == 5 then
+            displace = {1,0}
+         elseif reddiv == 6 then
+            displace = {2,0}
+         end
+      elseif whitediv == 5 then
+         if reddiv == 1 then
+            displace = {-1,-2}
+         elseif reddiv == 2 then
+            displace = {-1,-1}
+         elseif reddiv == 3 or reddiv == 4 then
+            displace = {-1,0}
+         elseif reddiv == 5 then
+            displace = {-1,1}
+         elseif reddiv == 6 then
+            displace = {-1,2}
+         end
+      elseif whitediv == 6 then
+         if reddiv == 1 or reddiv == 2 then
+            displace = {-2,-2}
+         elseif reddiv == 3 or reddiv == 4 then
+            displace = {-2,0}
+         elseif reddiv == 5 or reddiv == 6 then
+            displace = {-2,2}
+         end
+      end
+      startLuaCoroutine(self, "deviateobj")
+   end
+end
+
+function deviateobj()
+   happened = false
+   local forward, right  = self.getTransformForward(), self.getTransformRight()
+   if displace[1] ~= 0 then
+      local devpos = {forward.x*displace[1],0.5,forward.z*displace[1]}
+      marker.setPosition({devpos[1]+marker.getPosition().x,devpos[2]+marker.getPosition().y,devpos[3]+marker.getPosition().z})
+      happened = true
+   end
+   waitFrames(5)
+   if displace[2] ~= 0 then
+      local devpos = {right.x*displace[2],0.5,right.z*displace[2]}
+      marker.setPosition({devpos[1]+marker.getPosition().x,devpos[2]+marker.getPosition().y,devpos[3]+marker.getPosition().z})
+      happened = true
+   end
+   if happened == true then
+      whitediv, reddiv, displace, marker = nil, nil, {0,0}, nil
+   end
+   return 1
+end
