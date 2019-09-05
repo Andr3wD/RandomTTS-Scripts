@@ -1,0 +1,244 @@
+function onload() --setting objects for later reference
+
+   displace = {0,0}
+   reddi = getObjectFromGUID("4a9890")
+   whitedi = getObjectFromGUID("7ad3a0")
+   self.createInput({
+      label = "Dist.",
+      input_function = "inputinput",
+      function_owner = self,
+      alignment      = 1,
+      position       = {2.3,0,-0.6},
+      width          = 1000,
+      height         = 500,
+      rotation = {0,0,0},
+      font_size = 300,
+   })
+   self.createButton({
+      click_function = "fire",
+      function_owner = self,
+      label          = "Fire!",
+      position       = {2.3,0,0.6},
+      rotation       = {0,0,0},
+      width          = 1000,
+      height         = 500,
+   })
+end
+
+function inputinput(obj,col,input,selected)
+   distance = input
+end
+
+function fire(obj,col)
+   if distance ~= "" then
+      self.setDescription("Last Distance: " .. tostring(distance))
+      startLuaCoroutine(self, "projectiletest")
+   end
+end
+
+function projectiletest() --Projectile stuff
+   local r = self.getRotation()
+   self.setRotation({r.x,r.y+180,r.z})
+   local forward,pos = self.getTransformForward(),self.getPosition()
+   self.setRotation(r)
+   projectile = spawnObject({
+      type           = "Custom_Model",
+      position       = {pos.x+forward.x*2,pos.y,pos.z+forward.z*2},
+      scale = {0.43, 0.43, 0.43},
+      rotation = {r.x,r.y+90,r.z},
+   })
+   projectile.setCustomObject({
+      mesh = "http://pastebin.com/raw/6dfYCdy2",
+      diffuse = "http://www.soultravelmultimedia.com/wp-content/uploads/2010/04/Water-Texture-wild-creek.jpg",
+      type = 0,
+      material = 3,
+      fresnel_strength = 0,
+      specular_sharpness = 2,
+      specular_intensity = 0,
+   })
+   waitFrames(3)
+   projectile.setLuaScript(
+   [==[
+   function onload()
+      torpedo = true
+      speed = ]==] .. distance .. [==[
+      move()
+      customdata = {
+      {
+         mesh = "https://gist.githubusercontent.com/anonymous/db30441b6302bb789471/raw/7e6b735bfcaa51346f100fdea7be83d48ae828dc/gistfile1.txt",
+         diffuse = "http://orig00.deviantart.net/85e1/f/2012/193/f/a/agua_png_by_eross_666-d56zsjd.png",
+         collider = "https://gist.githubusercontent.com/anonymous/acc0f943a13709bcf490/raw/f29038e430f10d48e1536c9b87cde036d64321bc/gistfile1.txt",
+      },
+      {
+         mesh = "https://gist.githubusercontent.com/anonymous/db30441b6302bb789471/raw/7e6b735bfcaa51346f100fdea7be83d48ae828dc/gistfile1.txt",
+         diffuse = "http://orig15.deviantart.net/9405/f/2012/193/a/e/agua_png_by_eross_666-d56zspb.png",
+         collider = "https://gist.githubusercontent.com/anonymous/acc0f943a13709bcf490/raw/f29038e430f10d48e1536c9b87cde036d64321bc/gistfile1.txt",
+      },
+      {
+         mesh = "https://gist.githubusercontent.com/anonymous/db30441b6302bb789471/raw/7e6b735bfcaa51346f100fdea7be83d48ae828dc/gistfile1.txt",
+         diffuse = "http://pngimg.com/upload/water_PNG3288.png",
+         collider = "https://gist.githubusercontent.com/anonymous/acc0f943a13709bcf490/raw/f29038e430f10d48e1536c9b87cde036d64321bc/gistfile1.txt",
+      }
+      }
+   end
+   function move()
+      local r = self.getRotation()
+      self.setRotation({r.x,r.y+90,r.z})
+      local f = self.getTransformForward()
+      self.setRotation(r)
+      local p = self.getPosition()
+      self.setPosition({p.x,p.y+0.5,p.z})
+      self.translate({f.x*speed,0,f.z*speed})
+   end
+   function onCollisionEnter(info)
+      if info.collision_object.tag ~= "Surface" and info.collision_object.interactable == true then
+         spawnmarker()
+         self.destruct()
+      end
+   end
+
+   function spawnmarker()
+      marker = spawnObject({
+         type           = "Custom_Model",
+         position       = self.getPosition(),
+         scale = {0.48, 0.48, 0.48},
+      })
+      local data = customdata[math.random(1,3)]
+      marker.setCustomObject({
+         mesh = data.mesh,
+         collider = data.collider,
+         diffuse = data.diffuse,
+         type = 1,
+         material = 3,
+         fresnel_strength = 0,
+         specular_sharpness = 2,
+         specular_intensity = 0
+      })
+      marker.setLuaScript([[
+      function onload()
+         local test = Physics.cast({
+            origin=self.getPosition(), direction={0,-1,0}, type=1
+         })
+         self.setPosition(test[1].point)
+      end
+      ]])
+   end
+   ]==])
+return 1
+end
+
+function onObjectRandomize(obj, col) --on dice randomize, run waitforred or waitforwhite
+   if obj == reddi and marker ~= nil then
+      startLuaCoroutine(self, "waitforred")
+   elseif obj == whitedi and marker ~= nil then
+      startLuaCoroutine(self, "waitforwhite")
+   end
+end
+
+function waitforred() --Waits for red dice to stop moving
+   while reddi.resting ~= true do
+      waitFrames(10)
+      if reddi.resting == true then
+         reddiv = reddi.getValue()
+         calculatedeviation()
+      end
+   end
+   return 1
+end
+
+function waitforwhite() --Waits for white dice to stop moving
+   while whitedi.resting ~= true do
+      waitFrames(10)
+      if whitedi.resting == true then
+         whitediv = whitedi.getValue()
+         calculatedeviation()
+      end
+   end
+   return 1
+end
+
+function waitFrames(frames) --Allows function to wait for a certain amount of frames
+   while frames > 0 do
+      coroutine.yield(0)
+      frames = frames - 1
+   end
+end
+
+function calculatedeviation() --{forward or -back,right or -left} This is the table translated into script.
+   if whitediv ~= nil and reddiv ~= nil then
+      if whitediv == 1 then
+         if reddiv == 1 or reddiv == 2 then
+            displace = {2,-2}
+         elseif reddiv == 3 or reddiv == 4 then
+            displace = {2,0}
+         elseif reddiv == 5 or reddiv == 6 then
+            displace = {2,2}
+         end
+      elseif whitediv == 2 then
+         if reddiv == 1 then
+            displace = {1,-2}
+         elseif reddiv == 2 then
+            displace = {1,-1}
+         elseif reddiv == 3 or reddiv == 4 then
+            displace = {1,0}
+         elseif reddiv == 5 then
+            displace = {1,1}
+         elseif reddiv == 6 then
+            displace = {1,2}
+         end
+      elseif whitediv == 3 or whitediv == 4 then
+         if reddiv == 1 then
+            displace = {0,-2}
+         elseif reddiv == 2 then
+            displace = {0,-1}
+         elseif reddiv == 3 or reddiv == 4 then
+            broadcastToAll("Hit", {255,255,255})
+         elseif reddiv == 5 then
+            displace = {1,0}
+         elseif reddiv == 6 then
+            displace = {2,0}
+         end
+      elseif whitediv == 5 then
+         if reddiv == 1 then
+            displace = {-1,-2}
+         elseif reddiv == 2 then
+            displace = {-1,-1}
+         elseif reddiv == 3 or reddiv == 4 then
+            displace = {-1,0}
+         elseif reddiv == 5 then
+            displace = {-1,1}
+         elseif reddiv == 6 then
+            displace = {-1,2}
+         end
+      elseif whitediv == 6 then
+         if reddiv == 1 or reddiv == 2 then
+            displace = {-2,-2}
+         elseif reddiv == 3 or reddiv == 4 then
+            displace = {-2,0}
+         elseif reddiv == 5 or reddiv == 6 then
+            displace = {-2,2}
+         end
+      end
+      startLuaCoroutine(self, "deviateobj")
+   end
+end
+
+function deviateobj()
+   happened = false
+   local forward, right  = self.getTransformForward(), self.getTransformRight()
+   if displace[1] ~= 0 then
+      local devpos = {forward.x*displace[1],0.5,forward.z*displace[1]}
+      marker.setPosition({devpos[1]+marker.getPosition().x,devpos[2]+marker.getPosition().y,devpos[3]+marker.getPosition().z})
+      happened = true
+   end
+   waitFrames(5)
+   if displace[2] ~= 0 then
+      local devpos = {right.x*displace[2],0.5,right.z*displace[2]}
+      marker.setPosition({devpos[1]+marker.getPosition().x,devpos[2]+marker.getPosition().y,devpos[3]+marker.getPosition().z})
+      happened = true
+   end
+   if happened == true then
+      whitediv, reddiv, displace, marker = nil, nil, {0,0}, nil
+   end
+   return 1
+end
