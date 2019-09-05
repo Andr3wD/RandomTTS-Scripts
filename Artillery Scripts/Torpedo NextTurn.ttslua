@@ -1,0 +1,19 @@
+function onload()
+   self.createButton({
+      click_function = "turn",
+      function_owner = self,
+      label          = "Next Turn",
+      position       = {0,0.1,0},
+      width          = 800,
+      height         = 500,
+      rotation = {0,180,0}
+   })
+end
+
+function turn()
+   for i,v in pairs(getAllObjects()) do
+      if v.getVar("torpedo") == true then
+         v.call("move")
+      end
+   end
+end
