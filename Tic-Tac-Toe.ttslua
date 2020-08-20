@@ -1,0 +1,346 @@
+--[[
+Made by DeathKnight1003 https://steamcommunity.com/profiles/76561198041312957
+If any help is needed with scripting, just message me. -DeathKnight1003
+]]--
+function onLoad(save_state)
+   -- Not exactly perfectly spaced, but it's good enough
+   self.setVectorLines({
+      {
+         points         = {{0.48,0.1,1.4}, {0.48,0.1,-1.4}},
+         color          = {1,1,1},
+         thickness      = 0.05,
+         rotation       = {0,0,0}
+      },
+      {
+         points         = {{-0.48,0.1,1.4}, {-0.48,0.1,-1.4}},
+         color          = {1,1,1},
+         thickness      = 0.05,
+         rotation       = {0,0,0}
+      },
+      {
+         points         = {{-1.4,0.1,0.48}, {1.4,0.1,0.48}},
+         color          = {1,1,1},
+         thickness      = 0.05,
+         rotation       = {0,0,0}
+      },
+      {
+         points         = {{-1.4,0.1,-0.48}, {1.4,0.1,-0.48}},
+         color          = {1,1,1},
+         thickness      = 0.05,
+         rotation       = {0,0,0}
+      },
+   })
+
+   positions = {
+      {0.963,0.08,0.963}, --Top left
+      {0,0.08,0.963}, -- Top middle
+      {-0.963,0.08,0.963}, -- Top right
+      {0.963,0.08,0}, -- Middle left
+      {0,0.08,0}, -- Middle
+      {-0.963,0.08,0}, -- Middle right
+      {0.963,0.08,-0.963}, -- Bottom left
+      {0,0.08,-0.963}, -- Bottom middle
+      {-0.963,0.08,-0.963} -- Bottom right=
+   }
+   for i,pos in pairs(positions) do
+      self.createButton({
+         click_function = "btnClicked" .. i,
+         label          = "",
+         function_owner = self,
+         position       = pos,
+         width          = 450*2,
+         height         = 450*2,
+         scale          = {0.5,1,0.5},
+         font_size      = 1000,
+         color          = "Black",
+         font_color     = "White",
+      })
+   end
+end
+
+function checkWin()
+   -- I'm doing so many comparisons, that it's probably just worth keeping these.
+   -- Could move all over the place to reduce initial space, but would look like a mess.
+   local l1 = gl(0)
+   local l2 = gl(1)
+   local l3 = gl(2)
+   local l4 = gl(3)
+   local l5 = gl(4)
+   local l6 = gl(5)
+   local l7 = gl(6)
+   local l8 = gl(7)
+   local l9 = gl(8)
+   if l1 then
+      if l1 == l2 and l2 == l3 then -- Transitive property. Hey, college was useful.
+         makeGreen(0,1,2)
+         return
+      elseif l1 == l4 and l4 == l7 then
+         makeGreen(0,3,6)
+         return
+      elseif l1 == l5 and l5 == l9 then
+         makeGreen(0,4,8)
+         return
+      end
+   end
+   if l2 and l2 == l5 and l5 == l8 then
+      makeGreen(1,4,7)
+      return
+   end
+   if l3 then
+      if l3 == l6 and l6 == l9 then
+         makeGreen(2,5,8)
+         return
+      elseif l3 == l5 and l5 == l7 then
+         makeGreen(2,4,6)
+         return
+      end
+   end
+   if l4 and l4 == l5 and l5 == l6 then
+      makeGreen(3,4,5)
+      return
+   end
+   if l7 and l7 == l8 and l8 == l9 then
+      makeGreen(6,7,8)
+      return
+   end
+   for i=0,8 do
+      self.editButton({
+         index          = i,
+         color          = "Black",
+      })
+   end
+end
+
+function makeGreen(btn1,btn2,btn3)
+   for i=0,8 do
+      if i ~= btn1 and i ~= btn2 and i ~= btn3 then
+         self.editButton({
+            index          = i,
+            color          = "Black",
+         })
+      end
+   end
+   self.editButton({
+      index          = btn1,
+      color          = "Green",
+   })
+   self.editButton({
+      index          = btn2,
+      color          = "Green",
+   })
+   self.editButton({
+      index          = btn3,
+      color          = "Green",
+   })
+end
+
+-- Get Label
+function gl(btn)
+   local lbl = self.getButtons()[btn+1].label
+   if lbl == "" then
+      return false
+   else
+      return lbl
+   end
+end
+
+
+-- Button functions. Just copied and pasted with slight modifications.
+function btnClicked1(obj, col, alt)
+   local index = 0
+   if self.getButtons()[index+1].label ~= "" then
+      self.editButton({
+         index          = index,
+         label          = "",
+      })
+   else
+      if alt then
+         self.editButton({
+            index          = index,
+            label          = "X",
+         })
+      else
+         self.editButton({
+            index          = index,
+            label          = "O",
+         })
+      end
+   end
+   checkWin()
+end
+function btnClicked2(obj, col, alt)
+   local index = 1
+   if self.getButtons()[index+1].label ~= "" then
+      self.editButton({
+         index          = index,
+         label          = "",
+      })
+   else
+      if alt then
+         self.editButton({
+            index          = index,
+            label          = "X",
+         })
+      else
+         self.editButton({
+            index          = index,
+            label          = "O",
+         })
+      end
+   end
+   checkWin()
+end
+function btnClicked3(obj, col, alt)
+   local index = 2
+   if self.getButtons()[index+1].label ~= "" then
+      self.editButton({
+         index          = index,
+         label          = "",
+      })
+   else
+      if alt then
+         self.editButton({
+            index          = index,
+            label          = "X",
+         })
+      else
+         self.editButton({
+            index          = index,
+            label          = "O",
+         })
+      end
+   end
+   checkWin()
+end
+function btnClicked4(obj, col, alt)
+   local index = 3
+   if self.getButtons()[index+1].label ~= "" then
+      self.editButton({
+         index          = index,
+         label          = "",
+      })
+   else
+      if alt then
+         self.editButton({
+            index          = index,
+            label          = "X",
+         })
+      else
+         self.editButton({
+            index          = index,
+            label          = "O",
+         })
+      end
+   end
+   checkWin()
+end
+function btnClicked5(obj, col, alt)
+   local index = 4
+   if self.getButtons()[index+1].label ~= "" then
+      self.editButton({
+         index          = index,
+         label          = "",
+      })
+   else
+      if alt then
+         self.editButton({
+            index          = index,
+            label          = "X",
+         })
+      else
+         self.editButton({
+            index          = index,
+            label          = "O",
+         })
+      end
+   end
+   checkWin()
+end
+function btnClicked6(obj, col, alt)
+   local index = 5
+   if self.getButtons()[index+1].label ~= "" then
+      self.editButton({
+         index          = index,
+         label          = "",
+      })
+   else
+      if alt then
+         self.editButton({
+            index          = index,
+            label          = "X",
+         })
+      else
+         self.editButton({
+            index          = index,
+            label          = "O",
+         })
+      end
+   end
+   checkWin()
+end
+function btnClicked7(obj, col, alt)
+   local index = 6
+   if self.getButtons()[index+1].label ~= "" then
+      self.editButton({
+         index          = index,
+         label          = "",
+      })
+   else
+      if alt then
+         self.editButton({
+            index          = index,
+            label          = "X",
+         })
+      else
+         self.editButton({
+            index          = index,
+            label          = "O",
+         })
+      end
+   end
+   checkWin()
+end
+function btnClicked8(obj, col, alt)
+   local index = 7
+   if self.getButtons()[index+1].label ~= "" then
+      self.editButton({
+         index          = index,
+         label          = "",
+      })
+   else
+      if alt then
+         self.editButton({
+            index          = index,
+            label          = "X",
+         })
+      else
+         self.editButton({
+            index          = index,
+            label          = "O",
+         })
+      end
+   end
+   checkWin()
+end
+function btnClicked9(obj, col, alt)
+   local index = 8
+   if self.getButtons()[index+1].label ~= "" then
+      self.editButton({
+         index          = index,
+         label          = "",
+      })
+   else
+      if alt then
+         self.editButton({
+            index          = index,
+            label          = "X",
+         })
+      else
+         self.editButton({
+            index          = index,
+            label          = "O",
+         })
+      end
+   end
+   checkWin()
+end
