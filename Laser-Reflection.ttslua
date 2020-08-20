@@ -1,0 +1,211 @@
+--[[
+Made by DeathKnight1003 https://steamcommunity.com/profiles/76561198041312957
+If any help is needed with scripting, just message me.
+]]--
+function onLoad(save_state)
+   self.createButton({
+      click_function = "trigger",
+      function_owner = self,
+      label          = "Trigger\nLight",
+      position       = {0.5,0,-1.5},
+      rotation = {0,180,0},
+      width          = 500,
+      height         = 500,
+   })
+   self.createButton({
+      click_function = "delLights",
+      function_owner = self,
+      label          = "Delete\nLights",
+      position       = {-0.5,0,-1.5},
+      rotation = {0,180,0},
+      width          = 500,
+      height         = 500,
+   })
+end
+
+function startLaser()
+   local laserScale = {0.1,0.1,80}
+   local forward = self.getTransformForward()
+   local selfPos = self.getPosition()
+   local lightObj = nil
+   local hitPoint = nil
+   local lastHit = nil
+
+   for cont=1,20 do
+      local cast
+      if lightObj == nil then
+         lightObj = spawnObject({
+            type              = "BlockSquare",
+            position          = {selfPos.x+(forward.x*laserScale[3])/2,2.52,selfPos.z+(forward.z*laserScale[3])/2},
+            rotation          = self.getRotation(),
+            scale             = laserScale,
+         })
+         lightObj.setColorTint({1,1,1})
+         lightObj.setDescription("lightObj")
+         lightObj.setLock(true)
+         cast = Physics.cast({
+            origin       = {selfPos.x+(forward.x/2),2.52,selfPos.z+(forward.z/2)},
+            direction    = forward,
+            type         = 1,
+            max_distance = laserScale[3],
+            debug        = false,
+         }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+      else
+         local scale = lightObj.getScale()
+         cast = Physics.cast({
+            origin       = {hitPoint.x,2.52,hitPoint.z},
+            direction    = forward,
+            type         = 1,
+            max_distance = laserScale[3],
+            debug        = false,
+         }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+      end
+      local v = getClosestCast(cast, lastHit)
+      if v ~= nil then -- object blocking light and is closest
+
+         if v.hit_object.getDescription() == "Wall" then
+            local obj = v.hit_object
+            local norm = v.normal
+            local point = v.point
+            local dist = v.distance
+            hitPoint = point
+            lightObj.setScale({0.1,0.1,dist})
+            lightObj.setPosition({point.x-(forward.x*dist)/2,2.52,point.z-(forward.z*dist)/2})
+
+            -- Thank you https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector for solving a 4 year-old problem I've had.
+            local d = vector(forward.x, forward.y, forward.z)
+            local n = vector(norm.x,norm.y,norm.z)
+            local r = d-(2*(d:dot(n:normalize()))*n:normalize())
+            local r2=r*((laserScale[3])/2)+vector(point.x, point.y, point.z)
+            local x1,y1,z1 = r2:get()
+            local x2,y2,z2 = r:heading()
+            local tempCol = lightObj.getColorTint()
+            lightObj = spawnObject({
+               type              = "BlockSquare",
+               position          = {x1,2.52,z1},
+               rotation          = {0,y2,0},
+               scale             = laserScale,
+            })
+            lightObj.setColorTint(tempCol)
+            lightObj.setDescription("lightObj")
+            lightObj.setLock(true)
+            forward = lightObj.getTransformForward()
+            selfPos = lightObj.getPosition()
+            lastHit = v.hit_object
+         elseif v.hit_object.getDescription() == "Colour" then
+            local obj = v.hit_object
+            local norm = v.normal
+            local point = v.point
+            local dist = v.distance
+            hitPoint = point
+            lightObj.setScale({0.1,0.1,dist})
+            lightObj.setPosition({point.x-(forward.x*dist)/2,2.52,point.z-(forward.z*dist)/2})
+            local c2 = lightObj.getColorTint()
+            lightObj = spawnObject({
+               type              = "BlockSquare",
+               position          = {point.x+(forward.x*laserScale[3])/2,2.52,point.z+(forward.z*laserScale[3])/2},
+               rotation          = lightObj.getRotation(),
+               scale             = laserScale,
+            })
+            local c = v.hit_object.getColorTint()
+            lightObj.setColorTint({(c.r+c2.r)/2,(c.g+c2.g)/2,(c.b+c2.b)/2})
+            lightObj.setDescription("lightObj")
+            lightObj.setLock(true)
+            forward = lightObj.getTransformForward()
+            selfPos = lightObj.getPosition()
+            lastHit = v.hit_object
+         elseif v.hit_object.getDescription() == "Goal" then
+            print("working")
+            local point = v.point
+            local dist = v.distance
+            lightObj.setScale({0.1,0.1,dist})
+            lightObj.setPosition({point.x-(forward.x*dist)/2,2.52,point.z-(forward.z*dist)/2})
+            local col = v.hit_object.getColorTint()
+            local scol = lightObj.getColorTint()
+            --v.hit_object.setColorTint(scol)
+            if math.ceil(255*col.r) == math.ceil(255*scol.r) and math.ceil(255*col.g) == math.ceil(255*scol.g) and math.ceil(255*col.b) == math.ceil(255*scol.b) then
+               v.hit_object.createButton({
+                  click_function = "none",
+                  function_owner = self,
+                  label          = "✓",
+                  position       = {0,2,0},
+                  rotation       = {270,0,0},
+                  width          = 500,
+                  height         = 500,
+                  font_size      = 300,
+                  color          = "Green",
+               })
+            end
+            return
+         elseif v.hit_object.getDescription() == "Impenetrable" then
+            local point = v.point
+            local dist = v.distance
+            lightObj.setScale({0.1,0.1,dist})
+            lightObj.setPosition({point.x-(forward.x*dist)/2,2.52,point.z-(forward.z*dist)/2})
+            return
+         end
+      else
+         break
+      end
+   end
+end
+
+function getClosestCast(cast, lastHit)
+   -- This is a little too much. Thought errors were here. Don't feel like changing now.
+   local mincast
+   if lastHit == nil and cast[1] ~= nil then
+      mincast = cast[1]
+   elseif lastHit ~= nil and cast[1] ~= nil and cast[1].hit_object.getGUID() ~= lastHit.getGUID() then
+      mincast = cast[1]
+   elseif lastHit == nil and cast[1] == nil then
+      return nil
+   elseif lastHit ~= nil and cast[1] ~= nil and cast[1].hit_object.getGUID() == lastHit.getGUID() and cast[2] ~= nil then
+      mincast = cast[2]
+   else
+      return nil
+   end
+   for i,v in pairs(cast) do
+      if lastHit == nil and v.distance < mincast.distance and v.hit_object.getDescription() ~= "lightObj" then
+         mincast = v
+      elseif lastHit ~= nil and v.distance < mincast.distance and v.hit_object.getGUID() ~= lastHit.getGUID() and v.hit_object.getDescription() ~= "lightObj" then
+         mincast = v
+      end
+   end
+   return mincast
+end
+
+function trigger(obj, col, alt)
+   for i,v in pairs(getAllObjects()) do
+      if v.getDescription() == "lightObj" then
+         v.destruct()
+      elseif v.getDescription() == "Wall" then
+         --or v.getDescription() == "Colour"
+         v.setLock(true)
+      elseif v.getDescription() == "Goal" then
+         v.clearButtons()
+      end
+   end
+   startLaser()
+end
+
+function delLights(obj, col, alt)
+   for i,v in pairs(getAllObjects()) do
+      if v.getDescription() == "lightObj" then
+         v.destruct()
+      elseif v.getDescription() == "Wall" then
+         --or v.getDescription() == "Colour"
+         v.setLock(false)
+      elseif v.getDescription() == "Goal" then
+         v.clearButtons()
+      end
+   end
+end
+
+function waitFrames(frames)
+   while frames > 0 do
+      coroutine.yield(0)
+      frames = frames - 1
+   end
+end
+
+function none() end
