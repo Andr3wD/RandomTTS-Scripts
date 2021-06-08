@@ -1,0 +1,544 @@
+--- Made by DeathKnight1003 https://steamcommunity.com/profiles/76561198041312957 ---
+--- If any help is needed with scripting, feel free to message me. -DeathKnight1003
+
+--- The workshop URL for this item is https://steamcommunity.com/sharedfiles/filedetails/?id=1254622062
+
+
+--[[ TODO:
+Add AI player
+add lerp out, maybe?
+]]--
+
+-- I've decided against a restricted turn order for now. I can't guarantee no bugs, and a forced order could destroy things.
+
+function onload(info)
+   debugMode = false
+
+   -- World stuff
+   local uninteract = {"844127","581a77","56b563","09f428","3ebfc0","cb1610","0010a0",
+   "91f93c","eff1dd","e4f88e","3aebd2","3a459a","7ce5e7","da3a3b","f52add","8b7c66","257e54",
+   "3e7fba","4f1bcf","6fbc57","d7dc81","cafe6c","09dbb2","4621a0","07d06d", "919cf2", "c20b8e"}
+
+   deck = getObjectFromGUID("7515ec")
+   local buttonObj = getObjectFromGUID("8d4b25")
+   -- Blue stuff
+   bluePieces = {"a093e4","eedb76","3d11e1","3430d6",master="13b99c"}
+   blueCapturePos = {-16.75, 29.96, -13.76}
+   bluePositions = {{-5.51, 16.09, -25.55}, {6.11, 16.09, -25.55}, {19.20, 16.09, -17.06}}
+   -- Red stuff
+   redPieces = {"10b302","e94c0e","f26bd8","021878",master="f0410e"}
+   redPositions = {{5.71, 16.09, 26.10}, {-5.30, 16.09, 26.10}, {-19.20, 16.09, 17.06}}
+   redCapturePos = {16.75, 29.96, 13.76}
+
+   -- Board stuff
+   boardPosMap = {{{-7.00, 18.21, -7.00},{-7.00, 18.21, -3.50},{-7.00, 18.21, 0.00},{-7.00, 18.21, 3.50},{-7.00, 18.21, 7.00}},
+   {{-3.50, 18.21, -7.00},{-3.50, 18.21, -3.50},{-3.50, 18.21, 0.00},{-3.50, 18.21, 3.50},{-3.50, 18.21, 7.00}},
+   {{0.00, 18.90, -7.00},{0.00, 18.90, -3.50},{0.00, 18.90, 0.00},{0.00, 18.90, 3.50},{0.00, 18.90, 7.00}},
+   {{3.50, 18.21, -7.00},{3.50, 18.21, -3.50},{3.50, 18.21, 0.00},{3.50, 18.21, 3.50},{3.50, 18.21, 7.00}},
+   {{7.00, 18.21, -7.00},{7.00, 18.21, -3.50},{7.00, 18.21, 0.00},{7.00, 18.21, 3.50},{7.00, 18.21, 7.00}}}
+   piecePositionsMap = {} -- A table of {GUID={x=x,y=y,col=PlrCol}}
+   selections = {Blue=nil,Red=nil} -- For the card that Red or BLue is currently selecting
+
+   -- Prep stuff
+   updateBoardPieceMap() -- Update the piecePositionsMap and align the pieces
+   createButtons(buttonObj) -- Create the start button
+   handleIncorrectPlayerColors() -- Move players who are seated at the wrong colors to the right ones.
+
+   -- Create snap points for player cards
+   local snapList = {}
+   for plrCol,posList in pairs({Blue=bluePositions, Red=redPositions}) do
+      for i,v in pairs(posList) do
+         local rot = Player[plrCol].getHandTransform().rotation
+         local snap = {
+            position = v,
+            rotation = {rot.x,rot.y+90,rot.z},
+            rotation_snap = true,
+            tags = {"cards"}
+         }
+         table.insert(snapList, snap)
+      end
+   end
+
+   -- Create snap points for the pieces
+   for iy,y in pairs(boardPosMap) do
+      for ix, pos in pairs(y) do
+         local snap = {
+            position = {pos[1],17.45,pos[3]},
+            rotation = {0,0,0},
+            rotation_snap = true,
+            tags = {"pieces"}
+         }
+         table.insert(snapList, snap)
+      end
+   end
+   Global.setSnapPoints(snapList)
+
+   -- Give all the pieces the tag of "pieces" so they interact with the snap points on the board.
+   for i,v in pairs({bluePieces, redPieces}) do
+      for ind,var in pairs(v) do
+         getObjectFromGUID(var).setTags({"pieces"})
+      end
+   end
+
+   -- Disable interaction and enable lock.
+   for i,v in pairs(uninteract) do
+      local o = getObjectFromGUID(v)
+      o.interactable = false
+      o.setLock(true)
+   end
+
+   -- Shuffle cards
+   deck.shuffle()
+end
+
+-- Create buttons for start button object.
+function createButtons(buttonObj)
+   buttonObj.createButton({
+      click_function = "startGame",
+      function_owner = self,
+      label          = "Start Game",
+      position       = {0,0.7,0},
+      width          = 2000,
+      height         = 2000,
+      font_size = 350,
+      tooltip        = "Click to deal cards and start the game.",
+   })
+end
+
+function startGame(obj, col, alt)
+   obj.destruct() -- Don't allow starting the game again
+
+   -- Shuffle cards
+   deck.shuffle()
+
+   -- Randomly select player to go first (get extra card)
+   local tempCols = {"Blue","Red"}
+   local firstPlr = tempCols[math.random(1,2)]
+   broadcastToAll(firstPlr .. " has been selected to go first.")
+
+   -- Deal cards to players.
+   for plrCol,posList in pairs({Blue=bluePositions, Red=redPositions}) do
+      for i,v in pairs(posList) do
+         if not (i == 3 and plrCol ~= firstPlr) then
+            local rot = Player[plrCol].getHandTransform().rotation
+            deck.takeObject({
+               position          = v,
+               rotation          = {rot.x,rot.y+90,rot.z},
+               smooth            = true,
+               flip              = true,
+            })
+         end
+      end
+   end
+end
+
+-- Display the movement options when the piece is hovered over by the owner, else clear it.
+function onObjectHover(col, obj)
+   if #Player[col].getHoldingObjects() == 0 then
+      if obj ~= nil and selections[col] ~= nil and piecePositionsMap[obj.getGUID()] ~= nil then -- If hovering over something and plr has a card selection, then display the movement options
+         displayMovementOptions(obj)
+      else
+         clearVectorPaintByColor(col)
+      end
+   end
+end
+
+-- Sometimes the onObjectHover doesn't get triggered, so...
+function onObjectPickUp(col, obj)
+   if table.exists(bluePieces, obj.getGUID()) or table.exists(redPieces, obj.getGUID()) and selections[col] ~= nil then
+      displayMovementOptions(obj)
+   end
+end
+
+-- Takes care of all major piece movements, such as taking over pieces, moving them, and verifying the movements were legal.
+function onObjectDrop(col, obj)
+   if obj.type == "Generic" and selections[col] ~= nil and piecePositionsMap[obj.getGUID()] ~= nil then -- Likely to be a play piece.
+
+      -- Some helper things
+      local colPiecesBundle = {Red=redPieces, Blue=bluePieces}
+      local helperCaptureObjTbl = {Red=redCapturePos, Blue=blueCapturePos}
+
+      -- Get the other player color.
+      local otherCol = nil
+      if col == "Red" then
+         otherCol = "Blue"
+      else
+         otherCol = "Red"
+      end
+
+      -- Verify legitimate movement.
+      local oldPiecePositionsMap = piecePositionsMap -- save old map
+
+      -- Get the obj that was moved
+      local movedObj = updateBoardPieceMap() -- Bad function, but does double duty. Updates piece positions and checks for any changes.
+      if not movedObj then
+         -- if no object moved, then stop.
+         return
+      end
+      -- Get the new position of the moved object
+      local movedObjNewMapPos = piecePositionsMap[movedObj.getGUID()] -- Get the new xy pos of the moved obj
+
+      -- Temporarily revert back to the old piecePositionsMap
+      local newPiecePositionsMap = piecePositionsMap
+      piecePositionsMap = oldPiecePositionsMap
+      -- Get the legal moves from the old position
+      local legalMovements = generateLegalMovements(selections[col], movedObj, col) -- card, obj, plrcol
+      -- Go back to the new piecePositionsMap
+      piecePositionsMap = newPiecePositionsMap
+
+      -- Check if the move was illegal.
+      local illegalMove = true
+      for i,v in pairs(legalMovements) do
+         if v.x == movedObjNewMapPos.x and v.y == movedObjNewMapPos.y then
+            illegalMove = false
+         end
+      end
+
+      if illegalMove then
+         -- Illegal movement. Move piece back to where it was and stop.
+         setMapPosAndMove(oldPiecePositionsMap[movedObj.getGUID()], movedObj)
+         return
+      end
+
+      -- If the obj was dropped by its owner then...
+      if table.exists(colPiecesBundle[col], movedObj.getGUID()) then
+         clearVectorPaintByColor(col) -- Clear paint for owner
+
+         -- Move the card to the other player.
+         -- Position
+         local posBundle = {Red=redPositions, Blue=bluePositions} -- Small helper table.
+         selections[col].setPositionSmooth(posBundle[otherCol][3], false, true) -- Bad, but okay. indx 3 in blue/redPositions is the new card position.
+         -- Rotation
+         local otherRot = Player[otherCol].getHandTransform().rotation
+         selections[col].setRotationSmooth({0.00, otherRot.y+90, 0.00}, false, true)
+
+         -- Check for empty card slot
+         local emptyPos = getEmptyPos(posBundle[col])
+         if emptyPos ~= nil then
+            -- Grab new card from new card pos.
+            local newCard = nil
+            local cast = Physics.cast({
+               origin       = posBundle[col][3],
+               direction    = {0,1,0},
+               type         = 3,
+               size         = {1,1,1},
+               max_distance = 1,
+               debug        = debugMode,
+            }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+            for i,v in pairs(cast) do
+               local o = v.hit_object
+               if o.type == "Card" then
+                  newCard = o
+                  break
+               end
+            end
+
+            -- We potentially have new card. Check first, then move to emptyPos.
+            if newCard ~= nil then
+               newCard.setPositionSmooth(emptyPos, false, true)
+            end
+         end
+
+         clearSelected(col) -- Clear the card as being selected and reset the button color.
+
+         -- Handle taking over other pieces.
+         -- Do a semi-large cast that should cover everything below and some to the sides.
+         local cast = Physics.cast({
+            origin       = obj.getPosition(),
+            direction    = {0,-1,0},
+            type         = 3,
+            size         = {2,2,2},
+            max_distance = 20,
+            debug        = debugMode,
+         }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+
+         for i,v in pairs(cast) do
+            local o = v.hit_object
+            if table.exists(colPiecesBundle[otherCol], o.getGUID()) then -- If otherCOl owns this piece then...
+               -- Then it (o) has been captured. They occupy the same space or one is above the other.
+               o.setPosition(helperCaptureObjTbl[otherCol])
+               table.delete(piecePositionsMap, o.getGUID())
+            end
+         end
+
+      else
+         -- Set the position of the object back to where it belongs.
+         setMapPosAndMove(oldPiecePositionsMap[movedObj.getGUID()], movedObj)
+      end
+   else
+      -- Just update the board to keep on top of it.
+      updateBoardPieceMap()
+   end
+end
+
+-- Displays the movement options for the provided obj
+function displayMovementOptions(obj)
+   -- Example of old card code: movement = {{x=-1,y=-1},{x=1,y=1},{x=1,y=0},{x=-1,y=0}}
+
+   -- Get the player color whom this obj belongs to.
+   local plrCol = nil
+   if selections.Blue ~= nil and table.exists(bluePieces, obj.getGUID()) then -- Might be better to use tags instead.
+      plrCol = "Blue"
+   elseif selections.Red ~= nil and table.exists(redPieces, obj.getGUID()) then
+      plrCol = "Red"
+   end
+
+   if plrCol ~= nil then -- If this obj doesn't belong to any color, then ignore.
+      local xyPos = piecePositionsMap[obj.getGUID()]
+      local vecLineTbl = {}
+
+      for i,newPos in pairs(generateLegalMovements(selections[plrCol], obj, plrCol)) do -- Parse through the piece's legal movements.
+         if verifyPosition(newPos, plrCol) then
+            local endPos = boardPosMap[newPos.y][newPos.x]
+            local startPos = boardPosMap[xyPos.y][xyPos.x]
+            local vecPoints = generateVectorSquares(newPos.x, newPos.y, plrCol)
+
+            table.insert(vecLineTbl, vecPoints)
+         end
+      end
+      local oldVec = Global.getVectorLines() or {}
+      table.add(oldVec, vecLineTbl)
+      Global.setVectorLines(oldVec)
+   end
+end
+
+-- Applies the selectCard button to each card that leaves a container.
+function onObjectLeaveContainer(container, obj)
+   if obj.type == "Card" and container.type == "Deck" then
+      obj.createButton({
+         click_function = "selectCard",
+         function_owner = self,
+         position       = {0.8,0.5,-1.3},
+         width          = 250,
+         height         = 200,
+         color          = "White",
+         hover_color    = "Grey",
+         tooltip        = "Select Card"
+      })
+      obj.setTags({"cards"})
+   end
+end
+
+-- The button for each card. Selects the card and changes the color of the button to the player's color.
+function selectCard(obj, col, alt)
+   -- If selection exists, then wipe it.
+   if selections[col] ~= nil then
+      selections[col].editButton({
+         color          = "White",
+      })
+   end
+   if obj == selections[col] then
+      -- If already selected, then just toggle off.
+      selections[col] = nil
+   else
+      -- If not already selected, then select it.
+      obj.editButton({
+         index          = 0,
+         color          = col,
+      })
+      selections[col] = obj
+   end
+end
+
+-- Handle placing players in correct colors when loading table.
+-- Still don't know how I feel about this. Since this table relies on color so much, I'm going to keep it for now.
+function handleIncorrectPlayerColors()
+   local plrs = getSeatedPlayers()
+   for i,v in pairs(plrs) do
+      if v ~= "Grey" and v ~= "Black" and v ~= "Red" and v ~= "Blue" then
+         if not Player.Blue.seated then
+            Player[v].changeColor("Blue")
+         elseif not Player.Red.seated then
+            Player[v].changeColor("Red")
+         else
+            return
+         end
+      end
+   end
+end
+
+-- Generates the vector drawing squares for the provided x,y coordinate that belongs to the boardPosMap, and draws them with the provided col.
+function generateVectorSquares(x, y, col)
+   local squareSize = 3.5 -- Probably should be global.
+   local sSH = squareSize/2
+   local posM = boardPosMap[y][x]
+   local vec = {
+      points    = {{posM[1]-sSH, 17.45, posM[3]-sSH}, {posM[1]+sSH, 17.45, posM[3]-sSH}, {posM[1]+sSH, 17.45, posM[3]+sSH}, {posM[1]-sSH, 17.45, posM[3]+sSH}, {posM[1]-sSH, 17.45, posM[3]-sSH}},
+      color     = col,
+      thickness = 0.3,
+      rotation  = {0,0,0},
+   }
+   return vec
+end
+
+-- Updates the piecePositionsMap with the objects on the board.
+function updateBoardPieceMap() -- Returns if a piece was moved, and if so, the piece which moved.
+   local pieceMoved = false
+   local newPiecePositionsMap = {}
+   for yi,y in pairs(boardPosMap) do
+      for xi, pos in pairs(y) do
+         -- Do a cast for each square spot
+         local cast = Physics.cast({
+            origin       = pos,
+            direction    = {0,1,0},
+            type         = 3,
+            size         = {3,3,3},
+            max_distance = 20,
+            debug        = debugMode,
+         }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+         for ind,var in pairs(cast) do
+            if var.hit_object.type == "Generic" then
+               -- Save oldPos to check if anything has moved.
+               local oldPos = piecePositionsMap[var.hit_object.getGUID()]
+
+               -- Get which player color the piece belongs to.
+               local pieceColor = nil
+               if table.exists(bluePieces, var.hit_object.getGUID()) then
+                  pieceColor = "Blue"
+               else -- exists in redPieces. This assumes that the piece is actually a piece, and not a random object with the generic type.
+                  pieceColor = "Red"
+               end
+
+               -- Add the piece to the newPiecePositionsMap
+               newPiecePositionsMap[var.hit_object.getGUID()] = {x=xi,y=yi,col=pieceColor}
+
+               -- Snap the piece into position and rotation
+               var.hit_object.setPosition(pos)
+               var.hit_object.setRotation({0,0,0})
+
+               -- Check if this object has moved since last time
+               if oldPos ~= nil then
+                  if not (oldPos.x == xi and oldPos.y == yi) then
+                     pieceMoved = var.hit_object
+                  end
+               end
+            end
+         end
+      end
+   end
+   piecePositionsMap = newPiecePositionsMap
+   return pieceMoved
+end
+
+-- Clears the selected card for the provided player's col.
+function clearSelected(col)
+   if selections[col] ~= nil then
+      selections[col].editButton({
+         color          = "White",
+      })
+      selections[col] = nil
+   end
+end
+
+-- Checks if the provided tbl's .x and .y positions for the map are already taken by the provided col.
+function mapPosTaken(tbl, col)
+   for i,v in pairs(piecePositionsMap) do
+      if v.x == tbl.x and v.y == tbl.y and col == v.col then
+         return true
+      end
+   end
+   return false
+end
+
+-- Verifies that the xyTbl position is within the threshold of the map and that the spot isn't taken by the provided player's col.
+function verifyPosition(xyTbl, col)
+   if xyTbl.x > #boardPosMap[1] or xyTbl.x < 1 or xyTbl.y > #boardPosMap or xyTbl.y < 1 or mapPosTaken({x=xyTbl.x, y=xyTbl.y}, col) then
+      return false
+   end
+   return true
+end
+
+-- Checks if the provided thing exsts in the provided tbl.
+function table.exists(tbl, thing)
+   for i,v in pairs(tbl) do
+      if v == thing then
+         return true
+      end
+   end
+   return false
+end
+
+-- Clears vector paint matching the provided col.
+function clearVectorPaintByColor(col)
+   local vecLines = Global.getVectorLines()
+   if vecLines then
+      -- Deleting items from a table is annoying, so just make a brand new table.
+      local newVecLines = {}
+      for i,v in pairs(vecLines) do
+         if v.color ~= Color.fromString(col) then
+            table.insert(newVecLines, v)
+         end
+      end
+      Global.setVectorLines(newVecLines)
+   end
+end
+
+-- Adds 2 tables, adding tbl2 into tbl1.
+function table.add(tbl1, tbl2)
+   for i,v in pairs(tbl2) do
+      table.insert(tbl1, v)
+   end
+end
+
+-- Gets the empty position from the list of provided positions (posList). Specifically looks for cards above that point that aren't moving.
+-- Specifically used for moving the 'new' card into position.
+function getEmptyPos(posList)
+   for i,v in pairs(posList) do
+      local cast = Physics.cast({
+         origin       = v,
+         direction    = {0,1,0},
+         type         = 3,
+         size         = {1,1,1},
+         max_distance = 1,
+         debug        = debugMode,
+      }) -- returns {{Vector point, Vector normal, float distance, Object hit_object}, ...}
+      local empty = true
+      for ind,var in pairs(cast) do
+         local o = var.hit_object
+         if o.type == "Card" and o.isSmoothMoving() == false then
+            empty = false
+         end
+      end
+      if empty then
+         return v
+      end
+   end
+   return nil
+end
+
+-- Deletes a given item from the given table.
+function table.delete(tbl, item)
+   for i,v in pairs(tbl) do
+      if v == item then
+         table.remove(tbl, i)
+         return true
+      end
+   end
+   return false
+end
+
+-- Generates a list of {x=x,y=y} legal moves given the card, obj piece, and player color.
+function generateLegalMovements(card, obj, plrCol)
+   local returnPosList = {}
+   local xyPos = piecePositionsMap[obj.getGUID()]
+   local xyMoveTbl = card.getTable("movement")
+   for i, xy in pairs(xyMoveTbl) do
+      local newPos
+      if plrCol == "Blue" then
+         newPos = {x=xyPos.x+xy.y, y=xyPos.y+xy.x}
+      else --Red
+         newPos = {x=xyPos.x-xy.y, y=xyPos.y-xy.x}
+      end
+      if verifyPosition(newPos, plrCol) then
+         table.insert(returnPosList, newPos)
+      end
+   end
+   return returnPosList
+end
+
+-- Allows direct interaction with the map, specifically setting the position of a piece and teleporting it there.
+function setMapPosAndMove(mapPos, obj)
+   piecePositionsMap[obj.getGUID()].x = mapPos.x
+   piecePositionsMap[obj.getGUID()].y = mapPos.y
+   obj.setPosition(boardPosMap[mapPos.y][mapPos.x])
+end
